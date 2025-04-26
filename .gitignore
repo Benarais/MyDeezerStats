@@ -1,0 +1,19 @@
+# === Backend (.NET) ===
+2-BACKEND/src/**/bin/
+2-BACKEND/src/**/obj/
+2-BACKEND/src/.vs/
+*.user
+*.suo
+
+# === Frontend (Angular) ===
+3-FRONTEND/node_modules/
+3-FRONTEND/dist/
+3-FRONTEND/.angular/cache
+
+# === Données ===
+1-DATA/Book.xlsx       # Fichier Excel à ne pas versionner
+
+# === Général ===
+.env                   # Fichiers d'environnement
+*.log                  # Logs
+.DS_Store              # Fichiers macOS
