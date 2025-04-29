@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { LoginService } from '../../services/login.service';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { DashboardService} from '../../services/dashboard.service';
 import {Album, Artist, Track, Recent } from "../../models/dashboard.models"
 
@@ -10,7 +11,7 @@ import {Album, Artist, Track, Recent } from "../../models/dashboard.models"
   standalone: true,
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
-  imports: [CommonModule]
+  imports: [CommonModule, FormsModule]
 })
 export class DashboardComponent implements OnInit {
   topAlbums: Album[] = [];
@@ -21,6 +22,8 @@ export class DashboardComponent implements OnInit {
   isLoading: boolean = false;
   errorMessage: string = '';
 
+  periods: string[] = [];
+  selectedPeriod: string = '4weeks'; 
   constructor(
     private loginService: LoginService,
     private router: Router,
@@ -37,13 +40,19 @@ export class DashboardComponent implements OnInit {
     }
   }
 
+  onPeriodChange(): void {
+    console.log('Période sélectionnée:', this.selectedPeriod);
+    // Implémentez ici la logique pour charger les données en fonction de la période
+    // this.loadData(this.selectedPeriod);
+  }
+
   private loadDashboardData(): void {
     // Appeler le service pour récupérer les données
-    this.dashboardService.getTopAlbums().subscribe(
+    this.periods = this.dashboardService.loadPeriods();
+
+    this.dashboardService.getTopAlbums(this.periods[1]).subscribe(
       (albums) => {
         this.topAlbums = albums;
-        this.topAlbums.forEach(album => {
-        });
       },
       (error) => {
         this.errorMessage = 'Erreur lors du chargement des albums';

@@ -18,7 +18,7 @@ namespace MyDeezerStats.API.Controllers
             _logger = logger;
         }
 
-        [Authorize]
+        //[Authorize]
         [HttpGet("top-albums")]
         public async Task<IActionResult> GetTopAlbums([FromQuery] DateTime? from, [FromQuery] DateTime? to)
         {
