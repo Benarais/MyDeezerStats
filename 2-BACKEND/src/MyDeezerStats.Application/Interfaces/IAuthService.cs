@@ -9,5 +9,6 @@ namespace MyDeezerStats.Application.Interfaces
     public interface IAuthService
     {
         Task<string> Authenticate(string username, string password);
+        Task<bool> CreateUser(string email, string password);
     }
 }

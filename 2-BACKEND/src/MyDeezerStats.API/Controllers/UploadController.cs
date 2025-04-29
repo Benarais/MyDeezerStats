@@ -15,40 +15,6 @@ namespace MyDeezerStats.API.Controllers
             _excelService = excelService;
         }
 
-        //[HttpPost("import-excel")]
-        //[RequestFormLimits(ValueLengthLimit = int.MaxValue, MultipartBodyLengthLimit = int.MaxValue)]
-        //public IActionResult ImportExcel()
-        //{
-        //    // Log du Content-Type reçu
-        //    Console.WriteLine($"Content-Type reçu : {Request.ContentType}");
-
-        //    // Vérification des en-têtes de la requête
-        //    foreach (var header in Request.Headers)
-        //    {
-        //        Console.WriteLine($"Header : {header.Key} = {header.Value}");
-        //    }
-        //    foreach (var f in Request.Form.Files)
-        //    {
-        //        Console.WriteLine($"Fichier détecté : {f.Name} ({f.FileName})");
-        //    }
-        //    // Vérification du formulaire
-        //    var form = Request.Form;
-        //    Console.WriteLine($"Form Keys: {string.Join(", ", form.Keys)}");
-
-        //    // Vérification de la présence du fichier
-        //    var file = form.Files["file"];
-        //    if (file == null)
-        //    {
-        //        Console.WriteLine("Aucun fichier trouvé dans la requête.");
-        //        return BadRequest("Fichier non reçu.");
-        //    }
-
-        //    // Log du fichier reçu
-        //    Console.WriteLine($"Fichier reçu : {file.FileName}, Taille : {file.Length} octets");
-
-        //    return Ok($"Reçu fichier : {file.FileName}");
-        //}
-
 
         [HttpPost("import-excel")]
         public async Task<IActionResult> ImportExcel([FromForm] IFormFile file)

@@ -1,1 +1,62 @@
-<p>dashboard works!</p>
+<div class="dashboard-container">
+
+    <!-- Top 20 Albums -->
+    <section class="section">
+        <h2><i class="fas fa-compact-disc"></i> Top albums</h2>
+        <div class="card-list">
+            <div *ngFor="let album of topAlbums; let i = index" class="card" 
+                 [title]="album.title + (album.artist ? ' - ' + album.artist : '')">
+                <div class="rank">{{ i + 1 }}</div>
+                <img [src]="album.coverUrl || 'assets/default-cover.jpg'" alt="{{ album.title }}" class="card-image" />
+                <div class="card-content">
+                    <h3>{{ album.title }}</h3>
+                    <p>{{ album.artist }}</p>
+                </div>
+            </div>
+        </div>
+    </section>
+  
+    <!-- Top 20 Artistes -->
+    <section class="section">
+        <h2><i class="fas fa-user"></i> Top artistes</h2>
+        <div class="card-list">
+            <div *ngFor="let artist of topArtists; let i = index" class="card" 
+                 [title]="artist.artist">
+                <div class="rank">{{ i + 1 }}</div>
+                <img [src]="artist.coverUrl || 'assets/default-cover.jpg'" alt="{{ artist.artist }}" class="card-image" />
+                <div class="card-content">
+                    <h3>{{ artist.artist }}</h3>
+                </div>
+            </div>
+        </div>
+    </section>
+  
+    <!-- Top 20 Morceaux -->
+    <section class="section">
+        <h2><i class="fas fa-music"></i> Top morceaux</h2>
+        <div class="card-list">
+            <div *ngFor="let song of topTracks; let i = index" class="card" 
+                 [title]="song.track + ' - ' + song.artist + (song.album ? ' (' + song.album + ')' : '')">
+                <div class="rank">{{ i + 1 }}</div>
+                <img [src]="song.trackUrl || 'assets/default-cover.jpg'" alt="{{ song.track }}" class="card-image" />
+                <div class="card-content">
+                    <h3>{{ song.track }}</h3>
+                    <p>{{ song.artist }}</p>
+                    <p>{{ song.album }}</p>
+                </div>
+            </div>
+        </div>
+    </section>
+  
+    <!-- Dernières écoutes -->
+    <section class="section">
+        <h2><i class="fas fa-history"></i> Dernières écoutes</h2>
+        <div class="last-listened">
+            <div *ngFor="let song of recentListens" class="last-item">
+                <p><strong>{{ song.track }}</strong> - {{ song.artist }}</p>
+                <span class="listened-date">{{ song.date | date:'short' }}</span>
+            </div>
+        </div>
+    </section>
+  
+</div>

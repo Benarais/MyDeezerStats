@@ -18,6 +18,12 @@ namespace MyDeezerStats.Infrastructure.Mongo
             _users = database.GetCollection<User>("users");
         }
 
+        public async Task<bool> CreateAsync(User user)
+        {
+            await _users.InsertOneAsync(user);
+            return true;
+        }
+
         public async Task<User?> GetByUsername(string username)
         {
             return await _users.Find(user => user.Email == username).FirstOrDefaultAsync();

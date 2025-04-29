@@ -28,66 +28,186 @@ namespace MyDeezerStats.Infrastructure.Mongo
             _logger = logger;
         }
 
-        public async Task<List<BsonDocument>> AggregateRawAsync(string groupByField, DateTime? from, DateTime? to, int limit)
+        public async Task<List<AlbumStatistic>> GetTopAlbumsWithTracksAsync(DateTime? from = null, DateTime? to = null, int limit = 20)
         {
             var collection = _database.GetCollection<BsonDocument>("listening");
+            var filter = BuildDateFilter(from, to);
 
-            var pipeline = new List<BsonDocument>();
-
-            // Filtrage par dates si spécifié
-            if (from.HasValue || to.HasValue)
+            var pipeline = new[]
             {
-                var dateFilter = new BsonDocument();
+        PipelineStageDefinitionBuilder.Match(filter),
+        new BsonDocument("$group",
+            new BsonDocument
+            {
+                { "_id",
+                    new BsonDocument
+                    {
+                        { "Album", "$Album" },
+                        { "Artist", "$Artist" },
+                        { "Track", "$Track" }
+                    }
+                },
+                { "Count", new BsonDocument("$sum", 1) }
+            }),
+        new BsonDocument("$group",
+            new BsonDocument
+            {
+                { "_id",
+                    new BsonDocument
+                    {
+                        { "Album", "$_id.Album" },
+                        { "Artist", "$_id.Artist" }
+                    }
+                },
+                { "Listening",
+                    new BsonDocument("$push",
+                        new BsonDocument
+                        {
+                            { "Name", "$_id.Track" },
+                            { "Count", "$Count" }
+                        })
+                },
+                { "TotalListens", new BsonDocument("$sum", "$Count") }
+            }),
+        new BsonDocument("$sort", new BsonDocument("TotalListens", -1)),
+        new BsonDocument("$limit", limit)
+    };
 
-                if (from.HasValue)
+            // D'abord récupérer en BsonDocument
+            var bsonResults = await collection.Aggregate<BsonDocument>(pipeline).ToListAsync();
+
+            // Puis convertir manuellement en AlbumStatistic
+            return bsonResults.Select(doc => new AlbumStatistic
+            {
+                Album = doc["_id"]["Album"].AsString,
+                Artist = doc["_id"]["Artist"].AsString,
+                AlbumTotalListening = doc["TotalListens"].AsInt32,
+                Listening = doc["Listening"].AsBsonArray.Select(t => new ListeningInfo
                 {
-                    dateFilter.Add("$gte", new BsonDateTime(from.Value));
-                    _logger.LogInformation("Filtre date from: {From}", from.Value);
-                }
-
-                if (to.HasValue)
-                {
-                    dateFilter.Add("$lte", new BsonDateTime(to.Value));
-                    _logger.LogInformation("Filtre date to: {To}", to.Value);
-                }
-
-                pipeline.Add(new BsonDocument("$match",
-                    new BsonDocument("Date", dateFilter)));
-            }
-
-            // Groupement dynamique
-            pipeline.Add(BuildGroupStage(groupByField));
-
-            // Tri et limite
-            pipeline.Add(new BsonDocument("$sort", new BsonDocument("count", -1)));
-            pipeline.Add(new BsonDocument("$limit", limit));
-
-            var result = await collection.AggregateAsync<BsonDocument>(pipeline);
-            return await result.ToListAsync();
+                    Name = t["Name"].AsString,
+                    Count = t["Count"].AsInt32,
+                    TotalDuration = 0, // Initialisé à 0, sera mis à jour par Deezer
+                    TotalListening = t["Count"].AsInt32
+                }).ToList()
+            }).ToList();
         }
 
-        private BsonDocument BuildGroupStage(string groupByField)
+        public async Task<List<ArtistStatistic>> GetTopArtistsWithTracksAsync(DateTime? from = null, DateTime? to = null, int limit = 20)
         {
-            var groupDoc = new BsonDocument
-            {
-                { "_id", $"${groupByField}" },
-                { "count", new BsonDocument("$sum", 1) }
-            };
+            var collection = _database.GetCollection<BsonDocument>("listening");
+            var filter = BuildDateFilter(from, to);
 
-            // Ajout des champs supplémentaires selon le type de groupement
-            switch (groupByField.ToLower())
+            var pipeline = new[]
             {
-                case "album":
-                    groupDoc.Add("artist", new BsonDocument("$first", "$Artist"));
-                    break;
+        PipelineStageDefinitionBuilder.Match(filter),
+        new BsonDocument("$group",
+            new BsonDocument
+            {
+                { "_id",
+                    new BsonDocument
+                    {
+                        { "Artist", "$Artist" },
+                        { "Track", "$Track" }
+                    }
+                },
+                { "Count", new BsonDocument("$sum", 1) }
+            }),
+        new BsonDocument("$group",
+            new BsonDocument
+            {
+                { "_id", "$_id.Artist" },
+                { "Listening",
+                    new BsonDocument("$push",
+                        new BsonDocument
+                        {
+                            { "Name", "$_id.Track" },
+                            { "Count", "$Count" }
+                        })
+                },
+                { "TotalListens", new BsonDocument("$sum", "$Count") }
+            }),
+        new BsonDocument("$sort", new BsonDocument("TotalListens", -1)),
+        new BsonDocument("$limit", limit)
+    };
 
-                case "track":
-                    groupDoc.Add("artist", new BsonDocument("$first", "$Artist"));
-                    groupDoc.Add("album", new BsonDocument("$first", "$Album"));
-                    break;
+            var bsonResults = await collection.Aggregate<BsonDocument>(pipeline).ToListAsync();
+
+            return bsonResults.Select(doc => new ArtistStatistic
+            {
+                Artist = doc["_id"].AsString,
+                Listening = doc["Listening"].AsBsonArray.Select(t => new ListeningInfo
+                {
+                    Name = t["Name"].AsString,
+                    Count = t["Count"].AsInt32,
+                    TotalDuration = 0 // Initialisé à 0
+                }).ToList()
+            }).ToList();
+        }
+
+        public async Task<List<TrackStatistic>> GetTopTracksWithAsync(DateTime? from = null, DateTime? to = null, int limit = 10)
+        {
+            var collection = _database.GetCollection<BsonDocument>("listening");
+            var filter = BuildDateFilter(from, to);
+
+            var pipeline = new[]
+            {
+        PipelineStageDefinitionBuilder.Match(filter),
+        new BsonDocument("$group",
+            new BsonDocument
+            {
+                { "_id",
+                    new BsonDocument
+                    {
+                        { "Track", "$Track" },
+                        { "Artist", "$Artist" },
+                        { "Album", "$Album" }
+                    }
+                },
+                { "Count", new BsonDocument("$sum", 1) }
+            }),
+        new BsonDocument("$project",
+            new BsonDocument
+            {
+                { "Track", "$_id.Track" },
+                { "Artist", "$_id.Artist" },
+                { "Album", "$_id.Album" },
+                { "Count", 1 }
+            }),
+        new BsonDocument("$sort",
+            new BsonDocument("Count", -1)),
+        new BsonDocument("$limit", limit)
+    };
+
+            var bsonResults = await collection.Aggregate<BsonDocument>(pipeline).ToListAsync();
+
+            return bsonResults.Select(doc => new TrackStatistic
+            {
+                Track = doc["Track"].AsString,
+                Artist = doc["Artist"].AsString,
+                Album = doc["Album"].AsString,
+                TrackDuration = 0,
+                TrackNumberListening = doc["Count"].AsInt32, 
+                TrackTotalListening = 0
+            }).ToList();
+        }
+
+
+        private FilterDefinition<BsonDocument> BuildDateFilter(DateTime? from, DateTime? to)
+        {
+            var builder = Builders<BsonDocument>.Filter;
+            var filter = builder.Empty;
+
+            if (from.HasValue)
+            {
+                filter &= builder.Gte("Date", from.Value.ToString("dd/MM/yyyy HH:mm:ss"));
             }
 
-            return new BsonDocument("$group", groupDoc);
+            if (to.HasValue)
+            {
+                filter &= builder.Lte("Date", to.Value.ToString("dd/MM/yyyy HH:mm:ss"));
+            }
+
+            return filter;
         }
 
         public async Task<List<ListeningEntry>> GetLatestListeningsAsync(int limit)
@@ -112,8 +232,6 @@ namespace MyDeezerStats.Infrastructure.Mongo
         public async Task InsertListeningsAsync(List<ListeningEntry> listenings)
         {
             var collection = _database.GetCollection<ListeningEntry>("listening");
-
-            //var tasks = new List<Task>();
             foreach (var listening in listenings)
             {
                 var filter = Builders<ListeningEntry>.Filter.And(

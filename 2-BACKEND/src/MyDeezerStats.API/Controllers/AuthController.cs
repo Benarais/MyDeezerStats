@@ -19,6 +19,59 @@ namespace MyDeezerStats.API.Controllers
             _logger = logger;
         }
 
+        [HttpPost("signup")]
+        public async Task<IActionResult> SignUp([FromBody] Microsoft.AspNetCore.Identity.Data.LoginRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("Signup attempt for {Email}", request.Email);
+
+                var createUserResult = await _authService.CreateUser(request.Email, request.Password);
+
+                _logger.LogInformation("Signup successful for {Email}", request.Email);
+
+                return Ok(true);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Signup failed: user already exists ({Email})", request.Email);
+                // 409 Conflict pour utilisateur existant
+                return Conflict(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during signup for {Email}", request?.Email);
+                return StatusCode(500, new { message = "Une erreur interne est survenue" });
+            }
+        }
+
+
+
+        //[HttpPost("signup")]
+        //public async Task<IActionResult> SignUp([FromBody] Microsoft.AspNetCore.Identity.Data.LoginRequest request)
+        //{
+        //    try
+        //    {
+        //        _logger.LogInformation($"Signup attempt for {request.Email}");
+
+        //        var createUserResult = await _authService.CreateUser(request.Email, request.Password);
+
+        //        if (!createUserResult)
+        //        {
+        //            _logger.LogWarning($"Signup failed for {request.Email}, user creation failed.");
+        //            return Ok(false);
+        //        }
+
+        //        _logger.LogInformation($"Signup successful for {request.Email}");
+
+        //        return Ok(true);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, $"Error during signup for {request?.Email}");
+        //        return StatusCode(500, new { message = "Une erreur interne est survenue" });
+        //    }
+        //}
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] Microsoft.AspNetCore.Identity.Data.LoginRequest request)

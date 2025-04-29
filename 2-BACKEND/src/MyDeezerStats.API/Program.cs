@@ -1,18 +1,31 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Identity;
 using MongoDB.Driver;
+using MyDeezerStats.Application.DeezerServices;
 using MyDeezerStats.Application.ExcelServices;
 using MyDeezerStats.Application.Interfaces;
 using MyDeezerStats.Application.MongoDbServices;
+using MyDeezerStats.Domain.Entities;
 using MyDeezerStats.Domain.Repositories;
 using MyDeezerStats.Infrastructure.Mongo;
 using MyDeezerStats.Infrastructure.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Charger les configurations de l'application
-builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+// Configuration hiérarchique
+builder.Configuration
+    .AddJsonFile("appsettings.json")
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true);
+
+var isInContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
+var mongoHost = isInContainer ? "mongodb" : "localhost";
+
+
+builder.Configuration["MongoDbSettings:ConnectionString"] =
+    builder.Configuration["MongoDbSettings:ConnectionString"]!
+          .Replace("localhost", mongoHost);
+//builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 
 // Ajouter les services à l'injection de dépendances
 builder.Logging.ClearProviders();
@@ -25,9 +38,12 @@ builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"))
 // Ajouter les autres services
 builder.Services.AddScoped<IExcelService, ExcelService>();
 builder.Services.AddScoped<IListeningRepository, ListeningRepository>();
+builder.Services.AddScoped<IDeezerService, DeezerService>();
 builder.Services.AddScoped<IListeningService, ListeningService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<PasswordHasher<User>>();
+builder.Services.AddHttpClient();
 builder.Services.AddControllers();
 
 System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
@@ -61,7 +77,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"], 
             ValidAudience = builder.Configuration["Jwt:Audience"],  
-            IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"]!)) 
+            IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"]!))
         };
     });
 
