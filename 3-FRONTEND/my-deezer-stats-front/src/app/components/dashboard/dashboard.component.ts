@@ -5,6 +5,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DashboardService} from '../../services/dashboard.service';
 import {Album, Artist, Track, Recent } from "../../models/dashboard.models"
+import { finalize, forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-dashboard',
@@ -22,8 +23,15 @@ export class DashboardComponent implements OnInit {
   isLoading: boolean = false;
   errorMessage: string = '';
 
-  periods: string[] = [];
-  selectedPeriod: string = '4weeks'; 
+  periods = [
+    { value: '4weeks', label: '4 dernières semaines' },
+    { value: 'thisYear', label: 'Cette année' },
+    { value: 'lastYear', label: 'Année dernière' },
+    { value: 'allTime', label: 'Depuis le début' }
+  ];
+
+  selectedPeriod = 'thisYear'; 
+
   constructor(
     private loginService: LoginService,
     private router: Router,
@@ -36,60 +44,39 @@ export class DashboardComponent implements OnInit {
     if (!this.loginService.isAuthenticated()) {
       this.router.navigate(['/login']);
     } else {
-      this.loadDashboardData();  // Charger les données du dashboard
+      this.loadDashboardData();  
     }
   }
 
   onPeriodChange(): void {
-    console.log('Période sélectionnée:', this.selectedPeriod);
-    // Implémentez ici la logique pour charger les données en fonction de la période
-    // this.loadData(this.selectedPeriod);
+    this.loadDashboardData();
   }
 
   private loadDashboardData(): void {
-    // Appeler le service pour récupérer les données
-    this.periods = this.dashboardService.loadPeriods();
-
-    this.dashboardService.getTopAlbums(this.periods[1]).subscribe(
-      (albums) => {
+    this.isLoading = true;
+    this.errorMessage = '';
+  
+    // Appels parallèles avec gestion individuelle
+    forkJoin([
+      this.dashboardService.getTopAlbums(this.selectedPeriod),
+      this.dashboardService.getTopArtists(this.selectedPeriod),
+      this.dashboardService.getTopTracks(this.selectedPeriod),
+      this.dashboardService.getRecentListens(this.selectedPeriod)
+    ]).pipe(
+      finalize(() => this.isLoading = false)
+    ).subscribe({
+      next: ([albums, artists, tracks, recentListens]) => {
         this.topAlbums = albums;
-      },
-      (error) => {
-        this.errorMessage = 'Erreur lors du chargement des albums';
-        console.error(error);
-      }
-    );
-
-    this.dashboardService.getTopArtists().subscribe(
-      (artists) => {
         this.topArtists = artists;
-      },
-      (error) => {
-        this.errorMessage = 'Erreur lors du chargement des artistes';
-        console.error(error);
-      }
-    );
-
-    this.dashboardService.getTopTracks().subscribe(
-      (tracks) => {
         this.topTracks = tracks;
+        this.recentListens = recentListens;
       },
-      (error) => {
-        this.errorMessage = 'Erreur lors du chargement des morceaux';
-        console.error(error);
+      error: (err) => {
+        this.errorMessage = 'Erreur lors du chargement';
+        console.error('Détail :', err);
       }
-    );
-
-    this.dashboardService.getRecentListens().subscribe(
-      (tracks) => {
-        this.recentListens = tracks;
-      },
-      (error) => {
-        this.errorMessage = 'Erreur lors du chargement des derniers morceaux';
-        console.error(error);
-      }
-    );
-    
-    this.isLoading = false;  // Une fois les données chargées, on désactive le chargement
+    });
   }
+
+
 }

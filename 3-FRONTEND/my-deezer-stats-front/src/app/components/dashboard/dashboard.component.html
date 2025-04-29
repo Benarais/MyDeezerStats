@@ -1,13 +1,15 @@
 <div class="dashboard-container">
     <!-- Sélecteur de période -->
     <div class="period-selector-container">
-        <select class="period-selector" [(ngModel)]="selectedPeriod" (change)="onPeriodChange()">
-            <option value="4weeks">4 dernières semaines</option>
-            <option value="thisYear">Cette année</option>
-            <option value="lastYear">Année dernière</option>
-            <option value="allTime">Depuis le début</option>
+        <select class="period-selector" 
+                [(ngModel)]="selectedPeriod" 
+                (change)="onPeriodChange()">
+          <option *ngFor="let period of periods" 
+                  [value]="period.value">
+            {{ period.label }}
+          </option>
         </select>
-    </div>
+      </div>
     
     <!-- Top 20 Albums -->
     <section class="section">

@@ -73,10 +73,8 @@ namespace MyDeezerStats.Infrastructure.Mongo
         new BsonDocument("$limit", limit)
     };
 
-            // D'abord récupérer en BsonDocument
             var bsonResults = await collection.Aggregate<BsonDocument>(pipeline).ToListAsync();
 
-            // Puis convertir manuellement en AlbumStatistic
             return bsonResults.Select(doc => new AlbumStatistic
             {
                 Album = doc["_id"]["Album"].AsString,
@@ -86,11 +84,12 @@ namespace MyDeezerStats.Infrastructure.Mongo
                 {
                     Name = t["Name"].AsString,
                     Count = t["Count"].AsInt32,
-                    TotalDuration = 0, // Initialisé à 0, sera mis à jour par Deezer
+                    TotalDuration = 0, // À mettre à jour avec les données réelles
                     TotalListening = t["Count"].AsInt32
                 }).ToList()
             }).ToList();
         }
+
 
         public async Task<List<ArtistStatistic>> GetTopArtistsWithTracksAsync(DateTime? from = null, DateTime? to = null, int limit = 20)
         {
@@ -191,24 +190,24 @@ namespace MyDeezerStats.Infrastructure.Mongo
             }).ToList();
         }
 
-
         private FilterDefinition<BsonDocument> BuildDateFilter(DateTime? from, DateTime? to)
         {
             var builder = Builders<BsonDocument>.Filter;
             var filter = builder.Empty;
 
+            // Version 1: Si les dates sont stockées comme DateTime dans MongoDB
             if (from.HasValue)
             {
-                filter &= builder.Gte("Date", from.Value.ToString("dd/MM/yyyy HH:mm:ss"));
+                filter &= builder.Gte("Date", from.Value);
             }
-
             if (to.HasValue)
             {
-                filter &= builder.Lte("Date", to.Value.ToString("dd/MM/yyyy HH:mm:ss"));
+                filter &= builder.Lte("Date", to.Value);
             }
 
             return filter;
         }
+
 
         public async Task<List<ListeningEntry>> GetLatestListeningsAsync(int limit)
         {
