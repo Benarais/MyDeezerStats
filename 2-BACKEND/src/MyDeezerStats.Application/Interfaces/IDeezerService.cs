@@ -1,17 +1,12 @@
-﻿using MyDeezerStats.Application.Dtos;
-using MyDeezerStats.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using MyDeezerStats.Domain.Entities;
+using MyDeezerStats.Domain.Entities.DeezerInfos;
 
 namespace MyDeezerStats.Application.Interfaces
 {
     public interface IDeezerService
     {
-        Task EnrichAlbumWithDeezerData(AlbumStatistic albumStatistic);
-        Task EnrichArtistWithDeezerData(ArtistStatistic artist);
-        Task EnrichTrackWithDeezerData(TrackStatistic track);
+        Task EnrichAlbumWithDeezerData(AlbumInfos? albumStatistic);
+        Task EnrichArtistWithDeezerData(ArtistInfos artist);
+        Task EnrichTrackWithDeezerData(TrackInfos? track);
     }
 }

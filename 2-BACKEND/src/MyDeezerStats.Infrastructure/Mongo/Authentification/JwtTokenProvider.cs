@@ -10,7 +10,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MyDeezerStats.Infrastructure.Authentication
+namespace MyDeezerStats.Infrastructure.Mongo.Authentification
 {
     public class JwtTokenProvider
     {

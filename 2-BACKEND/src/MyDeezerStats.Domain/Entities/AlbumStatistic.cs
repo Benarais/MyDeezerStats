@@ -13,7 +13,6 @@ namespace MyDeezerStats.Domain.Entities
         public string AlbumUrl { get; set; } = string.Empty;
         public int AlbumDuration { get; set; }
         public int AlbumTotalListening { get; set; }
-
         public int AlbumNumberListening { get; set; }
         public List<ListeningInfo> Listening { get; set; }  = new List<ListeningInfo> { };
     }

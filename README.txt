@@ -39,7 +39,15 @@ curl -X GET "https://localhost:7124/api/listening/top-albums -H "accept: applica
 
 curl -X POST http://localhost:7124/api/upload/import-excel -F "file=@/data/Book.xlsx"
 
-curl -X POST http://localhost:5035/api/upload/import-excel -F "file=@1-DATA/Book.xlsx"
+curl -X POST http://localhost:5035/api/upload/import-excel -F "file=@1-DATA/deezer.xlsx"
 
 
-curl -X GET "http://localhost:5035/api/listening/top-artists
+curl -X GET "http://localhost:5035/api/listening/top-albums
+
+docker exec -it deezer-api curl https://api.deezer.com
+
+curl -X GET "http://localhost:5035/api/listening/top-albums?from=2025-01-01T00:00:00.000Z&to=2025-12-31T00:00:00.000Z" 
+
+docker exec -it deezer-mongodb mongosh
+
+pour aller en base de données: docker exec -it deezer-mongodb mongosh -u admin -p admin --authenticationDatabase admin

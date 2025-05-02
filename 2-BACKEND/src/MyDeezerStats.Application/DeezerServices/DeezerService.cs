@@ -1,201 +1,291 @@
-﻿using MyDeezerStats.Application.Dtos;
-using MyDeezerStats.Application.Interfaces;
-using MyDeezerStats.Domain.Entities;
+﻿using MyDeezerStats.Application.Interfaces;
+using MyDeezerStats.Domain.Entities.DeezerInfos;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Web;
+using Microsoft.Extensions.Logging;
+using System.Net;
 
 namespace MyDeezerStats.Application.DeezerServices
 {
     public class DeezerService : IDeezerService
     {
         private readonly HttpClient _httpClient;
+        private readonly ILogger<DeezerService> _logger;
         private const string DeezerApiBaseUrl = "https://api.deezer.com";
 
-        public DeezerService(HttpClient httpClient)
+        public DeezerService(HttpClient httpClient, ILogger<DeezerService> logger)
         {
             _httpClient = httpClient;
+            _logger = logger;
         }
 
-        public async Task EnrichAlbumWithDeezerData(AlbumStatistic albumStatistic)
+        public async Task EnrichAlbumWithDeezerData(AlbumInfos? album)
         {
-            if (albumStatistic == null || albumStatistic.Listening == null || !albumStatistic.Listening.Any())
+            if (album is null)
                 return;
 
-            try
+            var query = HttpUtility.UrlEncode($"{album.Artist} {album.Title}");
+            var searchUrl = $"{DeezerApiBaseUrl}/search/album?q={query}";
+
+            _logger.LogInformation("Searching album: {Query}", query);
+
+            var searchData = await GetJsonArrayFromUrl(searchUrl);
+            if (searchData is null)
             {
-                // Recherche de l'album sur Deezer
-                var searchUrl = $"{DeezerApiBaseUrl}/search/album?q={Uri.EscapeDataString($"{albumStatistic.Album} {albumStatistic.Artist}")}&limit=1";
-                var searchResponse = await _httpClient.GetFromJsonAsync<DeezerSearchResponse<DeezerAlbum>>(searchUrl);
-                var deezerAlbum = searchResponse?.data?.FirstOrDefault();
-                if (deezerAlbum == null) return;
+                _logger.LogWarning("No search data found for album: {Query}", query);
+                return;
+            }
 
-                // Mise à jour de l'URL de la cover
-                albumStatistic.AlbumUrl = deezerAlbum.cover_medium;
+            foreach (var item in searchData.Value.EnumerateArray())
+            {
+                var albumTitle = item.GetProperty("title").GetString();
+                var artistName = item.GetProperty("artist").GetProperty("name").GetString();
 
-                // Récupération des détails de l'album (avec les pistes et leurs durées)
-                var albumDetailsUrl = $"{DeezerApiBaseUrl}/album/{deezerAlbum.id}";
-                var albumDetailsResponse = await _httpClient.GetFromJsonAsync<DeezerAlbumResponse>(albumDetailsUrl);
+                _logger.LogDebug("Found album: {AlbumTitle} by {ArtistName}", albumTitle, artistName);
 
-                if (albumDetailsResponse?.TracksData?.data != null)
+                if (string.Equals(albumTitle, album.Title, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(artistName, album.Artist, StringComparison.OrdinalIgnoreCase))
                 {
-                    // Durée totale de l’album
-                    albumStatistic.AlbumDuration = albumDetailsResponse.duration;
+                    var albumId = item.GetProperty("id").GetInt32();
+                    var albumDetailsUrl = $"{DeezerApiBaseUrl}/album/{albumId}";
 
-                    // Calcul du temps d'écoute total (somme durée piste × nb écoutes)
-                    albumStatistic.AlbumTotalListening = 0;
+                    _logger.LogInformation("Match found, retrieving album details from: {Url}", albumDetailsUrl);
 
-                    foreach (var track in albumStatistic.Listening)
+                    var albumDetails = await GetJsonFromUrl(albumDetailsUrl);
+                    if (albumDetails.HasValue)
                     {
-                        var deezerTrack = albumDetailsResponse.TracksData.data
-                            .FirstOrDefault(t => t.Title.Equals(track.Name, StringComparison.OrdinalIgnoreCase));
+                        album.AlbumUrl = albumDetails.Value.GetProperty("cover_big").GetString() ?? string.Empty;
+                        album.Duration = albumDetails.Value.GetProperty("duration").GetInt32();
 
-                        if (deezerTrack != null)
+                        _logger.LogInformation("Album enriched with cover and duration.");
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        public async Task EnrichTrackWithDeezerData(TrackInfos? track)
+        {
+            if (track == null || string.IsNullOrWhiteSpace(track.Title) || string.IsNullOrWhiteSpace(track.Artist))
+            {
+                _logger.LogWarning("Track information incomplete, cannot enrich");
+                return;
+            }
+
+            // Si les données sont déjà complètes, on ne fait rien
+            if (track.Duration > 0 && !string.IsNullOrWhiteSpace(track.TrackUrl))
+            {
+                _logger.LogDebug("Track already enriched: {Title}", track.Title);
+                return;
+            }
+
+            const int maxRetries = 3;
+            int attempt = 0;
+            bool success = false;
+
+            while (attempt < maxRetries && !success)
+            {
+                attempt++;
+                _logger.LogInformation("Enriching track {Title} (attempt {Attempt})", track.Title, attempt);
+
+                try
+                {
+                    // 1. Recherche exacte avec l'API Deezer
+                    var query = HttpUtility.UrlEncode($"artist:\"{track.Artist}\" track:\"{track.Title}\"");
+                    var searchUrl = $"{DeezerApiBaseUrl}/search?q={query}&limit=5";
+
+                    using var response = await _httpClient.GetAsync(searchUrl);
+
+                    if (response.StatusCode == HttpStatusCode.NotFound)
+                    {
+                        _logger.LogWarning("Track not found: {Title}", track.Title);
+                        continue;
+                    }
+
+                    response.EnsureSuccessStatusCode();
+
+                    var json = await response.Content.ReadAsStringAsync();
+                    using var doc = JsonDocument.Parse(json);
+                    var root = doc.RootElement;
+
+                    if (!root.TryGetProperty("data", out var data) || data.GetArrayLength() == 0)
+                    {
+                        _logger.LogWarning("No results found for: {Title}", track.Title);
+                        continue;
+                    }
+
+                    // 2. Trouver la meilleure correspondance
+                    foreach (var item in data.EnumerateArray())
+                    {
+                        var apiTitle = item.GetProperty("title").GetString() ?? string.Empty;
+                        var apiArtist = item.GetProperty("artist").GetProperty("name").GetString() ?? string.Empty;
+                        var apiAlbum = item.GetProperty("album").GetProperty("title").GetString() ?? string.Empty;
+
+                        if (IsMatchingTrack(track, apiTitle, apiArtist, apiAlbum))
                         {
-                            track.TotalDuration = deezerTrack.Duration * track.Count;
-                            albumStatistic.AlbumTotalListening += track.TotalDuration;
+                            // 3. Récupérer les données nécessaires
+                            track.Duration = item.GetProperty("duration").GetInt32();
+
+                            if (item.TryGetProperty("album", out var albumProp) &&
+                                albumProp.TryGetProperty("cover_big", out var coverProp))
+                            {
+                                track.TrackUrl = coverProp.GetString() ?? string.Empty;
+                            }
+
+                            _logger.LogInformation("Successfully enriched track: {Title}", track.Title);
+                            success = true;
+                            break;
                         }
                     }
                 }
+                catch (HttpRequestException ex)
+                {
+                    _logger.LogError(ex, "HTTP error while enriching track (attempt {Attempt})", attempt);
+                    //if (attempt >= maxRetries) ApplyFallbackValues(track);
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogError(ex, "JSON parsing error (attempt {Attempt})", attempt);
+                    //if (attempt >= maxRetries) ApplyFallbackValues(track);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Unexpected error (attempt {Attempt})", attempt);
+                    //if (attempt >= maxRetries) ApplyFallbackValues(track);
+                }
 
-                // Calcul du nombre total d'écoutes
-                albumStatistic.AlbumNumberListening = albumStatistic.Listening.Sum(t => t.Count);
+                if (!success && attempt < maxRetries)
+                {
+                    await Task.Delay(1000 * attempt); // Backoff exponentiel
+                }
+            }
+
+            if (!success)
+            {
+                //ApplyFallbackValues(track);
+                _logger.LogWarning("Using fallback values for track: {Title}", track.Title);
+            }
+        }
+
+        // Helper method pour vérifier la correspondance
+        private bool IsMatchingTrack(TrackInfos track, string apiTitle, string apiArtist, string apiAlbum)
+        {
+            // Comparaison insensible à la casse et aux caractères spéciaux
+            var cleanTrackTitle = CleanString(track.Title);
+            var cleanApiTitle = CleanString(apiTitle);
+
+            var cleanTrackArtist = CleanString(track.Artist);
+            var cleanApiArtist = CleanString(apiArtist);
+
+            var titleMatch = cleanTrackTitle.Equals(cleanApiTitle, StringComparison.OrdinalIgnoreCase);
+            var artistMatch = cleanTrackArtist.Equals(cleanApiArtist, StringComparison.OrdinalIgnoreCase);
+
+            // L'album est optionnel pour la correspondance
+            var albumMatch = string.IsNullOrEmpty(track.Album) ||
+                            CleanString(track.Album).Equals(CleanString(apiAlbum), StringComparison.OrdinalIgnoreCase);
+
+            return titleMatch && artistMatch && albumMatch;
+        }
+
+        // Helper method pour nettoyer les strings
+        private string CleanString(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input)) return string.Empty;
+
+            return input.Trim()
+                       .ToLowerInvariant()
+                       .Replace(" ", "")
+                       .Replace("-", "")
+                       .Replace("'", "")
+                       .Replace("&", "and");
+        }
+
+        // Fallback si l'enrichissement échoue
+        private void ApplyFallbackValues(TrackInfos track)
+        {
+            const int defaultDuration = 180; // 3 minutes par défaut
+            const string defaultCover = "https://e-cdns-images.dzcdn.net/images/cover/default-500x500.png";
+
+            if (track.Duration <= 0) track.Duration = defaultDuration;
+            if (string.IsNullOrWhiteSpace(track.TrackUrl)) track.TrackUrl = defaultCover;
+        }
+
+        public async Task EnrichArtistWithDeezerData(ArtistInfos? artist)
+        {
+            if (artist is null || string.IsNullOrWhiteSpace(artist.Name))
+                return;
+
+            var query = HttpUtility.UrlEncode(artist.Name);
+            var searchUrl = $"{DeezerApiBaseUrl}/search/artist?q={query}";
+
+            _logger.LogInformation("Searching artist: {Query}", query);
+
+            var searchData = await GetJsonArrayFromUrl(searchUrl);
+            if (searchData is null)
+            {
+                _logger.LogWarning("No search data found for artist: {Query}", query);
+                return;
+            }
+
+            foreach (var item in searchData.Value.EnumerateArray())
+            {
+                var artistName = item.GetProperty("name").GetString();
+                _logger.LogDebug("Found artist: {ArtistName}", artistName);
+
+                if (string.Equals(artistName, artist.Name, StringComparison.OrdinalIgnoreCase))
+                {
+                    artist.ArtistUrl = item.GetProperty("picture_big").GetString() ?? string.Empty;
+                    _logger.LogInformation("Artist enriched: {Artist}", artist.Name);
+                    return;
+                }
+            }
+        }
+
+        private async Task<JsonElement?> GetJsonFromUrl(string url)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync(url);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("Request failed: {StatusCode} for URL {Url}", response.StatusCode, url);
+                    return null;
+                }
+
+                var json = await response.Content.ReadAsStringAsync();
+                _logger.LogDebug("Raw JSON from {Url}:\n{Json}", url, json);
+
+                using var doc = JsonDocument.Parse(json);
+                return doc.RootElement.Clone(); // Cloner pour éviter la perte de scope du JsonDocument
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Erreur Deezer API: {ex.Message}");
-                CalculateFallbackValues(albumStatistic);
-            }
-        }
-
-        private void CalculateFallbackValues(AlbumStatistic albumStatistic)
-        {
-            // Calcul approximatif de la durée native si indisponible
-            if (albumStatistic.AlbumDuration <= 0 && albumStatistic.Listening.Any(t => t.TotalDuration > 0))
-            {
-                // Moyenne des durées connues × nombre de pistes
-                var avgDuration = albumStatistic.Listening
-                    .Where(t => t.TotalDuration > 0)
-                    .Average(t => t.TotalDuration / t.Count);
-
-                albumStatistic.AlbumDuration = (int)(avgDuration * albumStatistic.Listening.Count);
-            }
-
-            // Temps d'écoute total si indisponible
-            if (albumStatistic.AlbumTotalListening <= 0)
-            {
-                albumStatistic.AlbumTotalListening = albumStatistic.Listening.Sum(t => t.TotalDuration);
-            }
-
-            // Nombre total d'écoutes
-            albumStatistic.AlbumNumberListening = albumStatistic.Listening.Sum(t => t.Count);
-        }
-
-        public async Task EnrichArtistWithDeezerData(ArtistStatistic artistStatistic)
-        {
-            // Appel à l'API Deezer pour obtenir les détails de l'artiste
-            var artistInfo = await GetArtistInfoFromDeezer(artistStatistic.Artist);
-
-            if (artistInfo != null)
-            {
-                // Enrichissement des données de l'artiste
-                artistStatistic.ArtistUrl = artistInfo.CoverUrl;
-
-                // durée de chaque track écouté de l'artiste
-                foreach (var listening in artistStatistic.Listening)
-                {
-                    var trackInfo = await GetTrackInfoFromDeezer(listening.Name);
-                    if (trackInfo != null)
-                    {
-                        listening.TotalDuration = trackInfo.Duration;
-                    }
-                }
-
-                // Calcul de la durée totale d'écoute et du nombre total d'écoutes
-                int totalDuration = 0;
-                int totalListeningCount = 0;
-
-                // Parcours de chaque ListeningInfo pour calculer les durées et écoutes
-                foreach (var listening in artistStatistic.Listening)
-                {
-                    totalDuration += listening.TotalDuration;
-                    totalListeningCount += listening.Count;
-                }
-
-                artistStatistic.ArtistListeningDuration = totalDuration;
-                artistStatistic.ArtistListeningCount = totalListeningCount;
-            }
-        }
-
-        public  async Task EnrichTrackWithDeezerData(TrackStatistic track)
-        {
-            // Appel à l'API Deezer pour obtenir les détails du morceau
-            var trackInfos = await GetTrackInfoFromDeezer(track.Track, track.Album, track.Artist); 
-            if (trackInfos != null)
-            {
-                // Enrichissement des données de l'artiste
-                track.TrackDuration = trackInfos.Duration;
-                track.TrackUrl = trackInfos.TrackUrl;
-
-                track.TrackTotalListening = track.TrackNumberListening * track.TrackDuration;
-            }
-        }
-
-        private async Task<DeezerArtistInfos?> GetArtistInfoFromDeezer(string artistName)
-        {
-            // Effectuer la recherche de l'artiste
-            var url = $"https://api.deezer.com/search/artist?q={Uri.EscapeDataString(artistName)}";
-            var searchResponse = await _httpClient.GetFromJsonAsync<DeezerSearchResponse<DeezerArtist>>(url);
-            var deezerArtist = searchResponse?.data?.FirstOrDefault();
-
-            // Si on trouve l'artiste, effectuer une requête détaillée pour obtenir l'image
-            if (deezerArtist == null)
+                _logger.LogError(ex, "Error fetching or parsing JSON from URL: {Url}", url);
                 return null;
-
-            // Appeler l'API Deezer pour obtenir les détails de l'artiste (y compris l'image)
-            var artistDetailsUrl = $"https://api.deezer.com/artist/{deezerArtist.Id}";
-            var artistDetails = await _httpClient.GetFromJsonAsync<DeezerArtist>(artistDetailsUrl);
-
-            // Retourner les informations de l'artiste, y compris l'image
-            return new DeezerArtistInfos
-            {
-                Artist = deezerArtist.Name,
-                CoverUrl = artistDetails?.Picture ?? string.Empty 
-            };
+            }
         }
 
-        private async Task<DeezerTrackInfos?> GetTrackInfoFromDeezer(string trackName, string? albumName = null, string? artistName = null)
+        private async Task<JsonElement?> GetJsonArrayFromUrl(string url)
         {
-            // Crée une base de la query avec le titre de la piste
-            var query = $"track:\"{Uri.EscapeDataString(trackName)}\"";
+            var root = await GetJsonFromUrl(url);
 
-            // Si l'album est fourni, l'ajouter à la query
-            if (!string.IsNullOrEmpty(albumName))
+            if (root is null)
             {
-                query += $" album:\"{Uri.EscapeDataString(albumName)}\"";
-            }
-
-            // Si l'artiste est fourni, l'ajouter à la query
-            if (!string.IsNullOrEmpty(artistName))
-            {
-                query += $" artist:\"{Uri.EscapeDataString(artistName)}\"";
-            }
-
-            // Construire l'URL complet
-            var url = $"https://api.deezer.com/search?q={query}";
-
-            // Effectuer la requête à Deezer
-            var searchResponse = await _httpClient.GetFromJsonAsync<DeezerSearchResponse<DeezerTrack>>(url);
-            var deezerTrack = searchResponse?.data?.FirstOrDefault();
-
-            if (deezerTrack == null)
+                _logger.LogWarning("No JSON returned from URL: {Url}", url);
                 return null;
+            }
 
-            return new DeezerTrackInfos
+            if (!root.Value.TryGetProperty("data", out var dataArray))
             {
-                Track = deezerTrack.Title,
-                Duration = deezerTrack.Duration,
-                TrackUrl = deezerTrack.Album?.cover_medium ?? string.Empty,
-            };
-        }
+                _logger.LogWarning("Missing 'data' property in JSON from URL: {Url}", url);
+                _logger.LogDebug("Full JSON received: {Json}", root.ToString());
+                return null;
+            }
 
+            return dataArray;
+        }
     }
 }

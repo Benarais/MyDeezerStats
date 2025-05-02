@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MyDeezerStats.Infrastructure.Mongo
+namespace MyDeezerStats.Infrastructure.Mongo.Authentification
 {
     public class UserRepository : IUserRepository
     {

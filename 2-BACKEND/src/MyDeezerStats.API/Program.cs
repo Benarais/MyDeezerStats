@@ -8,7 +8,9 @@ using MyDeezerStats.Application.Interfaces;
 using MyDeezerStats.Application.MongoDbServices;
 using MyDeezerStats.Domain.Entities;
 using MyDeezerStats.Domain.Repositories;
-using MyDeezerStats.Infrastructure.Mongo;
+using MyDeezerStats.Infrastructure.Mongo.Authentification;
+using MyDeezerStats.Infrastructure.Mongo.Ecoutes;
+using MyDeezerStats.Infrastructure.Mongo.Informations;
 using MyDeezerStats.Infrastructure.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -36,11 +38,12 @@ builder.Logging.SetMinimumLevel(LogLevel.Information);
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 
 // Ajouter les autres services
-builder.Services.AddScoped<IExcelService, ExcelService>();
 builder.Services.AddScoped<IListeningRepository, ListeningRepository>();
+builder.Services.AddScoped<IInformationRepository, InformationRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IDeezerService, DeezerService>();
 builder.Services.AddScoped<IListeningService, ListeningService>();
-builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IExcelService, ExcelService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<PasswordHasher<User>>();
 builder.Services.AddHttpClient();

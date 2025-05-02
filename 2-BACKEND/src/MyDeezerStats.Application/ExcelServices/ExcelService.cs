@@ -47,6 +47,7 @@ namespace MyDeezerStats.Application.ExcelServices
             }
 
             await _listeningRepository.InsertListeningsAsync(listenings);
+            
         }
     }
 }
