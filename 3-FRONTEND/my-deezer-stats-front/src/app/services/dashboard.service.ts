@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { CacheService } from './cache.service';
-import { Observable } from 'rxjs';
+import { catchError, Observable, throwError } from 'rxjs';
 import { Album, Artist, Track, Recent } from '../models/dashboard.models';
 
 @Injectable({
@@ -9,9 +8,9 @@ import { Album, Artist, Track, Recent } from '../models/dashboard.models';
 })
 export class DashboardService {
   
-  private readonly apiUrl = 'http://localhost:5000/api/listening';
+  private readonly apiUrl = 'http://localhost:5000/api';
 
-  constructor(private http: HttpClient, private cacheService: CacheService) {}
+  constructor(private http: HttpClient) {}
 
   private getAuthHeaders(): HttpHeaders {
     const token = localStorage.getItem('token');
@@ -20,14 +19,32 @@ export class DashboardService {
     });
   }
 
+  uploadExcelFile(formData: FormData): Observable<any> {
+    return this.http.post(`${this.apiUrl}/upload/import-excel`, formData, {
+      headers: new HttpHeaders({
+        'Accept': 'application/json'
+      }),
+      reportProgress: true,
+      observe: 'response'
+    }).pipe(
+      catchError(error => {
+        return throwError(() => ({
+          status: error.status,
+          error: error.error,
+          message: error.error?.title || error.message
+        }));
+      })
+    );
+  }
+
   getTopAlbums(period: string): Observable<Album[]> {
     const { from, to } = this.getDateRange(period);
     
     const params = new HttpParams()
-      .set('from', from.toISOString())  // Convertir la date en ISO string
+      .set('from', from.toISOString())  
       .set('to', to.toISOString());
   
-    return this.http.get<Album[]>(`${this.apiUrl}/top-albums`, {
+    return this.http.get<Album[]>(`${this.apiUrl}/listening/top-albums`, {
       headers: this.getAuthHeaders(),
       params: params
     });
@@ -37,9 +54,9 @@ export class DashboardService {
     const { from, to } = this.getDateRange(period);
     
     const params = new HttpParams()
-      .set('from', from.toISOString())  // Convertir la date en ISO string
+      .set('from', from.toISOString())
       .set('to', to.toISOString());
-    return this.http.get<Artist[]>(`${this.apiUrl}/top-artists`, {
+    return this.http.get<Artist[]>(`${this.apiUrl}/listening/top-artists`, {
       headers: this.getAuthHeaders(),
       params: params
     });
@@ -49,9 +66,9 @@ export class DashboardService {
     const { from, to } = this.getDateRange(period);
     
     const params = new HttpParams()
-      .set('from', from.toISOString())  // Convertir la date en ISO string
+      .set('from', from.toISOString()) 
       .set('to', to.toISOString());
-    return this.http.get<Track[]>(`${this.apiUrl}/top-tracks`, {
+    return this.http.get<Track[]>(`${this.apiUrl}/listening/top-tracks`, {
       headers: this.getAuthHeaders(),
       params: params
     });
@@ -61,9 +78,9 @@ export class DashboardService {
     const { from, to } = this.getDateRange(period);
     
     const params = new HttpParams()
-      .set('from', from.toISOString())  // Convertir la date en ISO string
+      .set('from', from.toISOString())  
       .set('to', to.toISOString());
-    return this.http.get<Recent[]>(`${this.apiUrl}/recent`, {
+    return this.http.get<Recent[]>(`${this.apiUrl}/listening/recent`, {
       headers: this.getAuthHeaders(),
       params: params
     });
@@ -76,27 +93,21 @@ export class DashboardService {
     const previousYear = year - 1;
   
     switch (period) {
-      //console.log(period);
       case "4weeks":
-        // 4 dernières semaines
         const fourWeeksAgo = new Date(currentDate);
-        fourWeeksAgo.setDate(currentDate.getDate() - 28);  // 28 jours en arrière
+        fourWeeksAgo.setDate(currentDate.getDate() - 28); 
         return { from: fourWeeksAgo, to: currentDate };
   
       case "thisYear":
-        // L'année en cours
         return { from: new Date(`${year}-01-01`), to: new Date(`${year}-12-31`) };
   
       case "lastYear":
-        // L'année précédente
         return { from: new Date(`${previousYear}-01-01`), to: new Date(`${previousYear}-12-31`) };
   
       case "allTime":
-        // Depuis le début (date la plus ancienne)
-        return { from: new Date('2000-01-01'), to: currentDate };  // Adapté selon ta donnée
+        return { from: new Date('2000-01-01'), to: currentDate };  
   
       default:
-        // Période par défaut (par exemple, toute la période)
         return { from: new Date('2000-01-01'), to: currentDate };
     }
   }

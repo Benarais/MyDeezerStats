@@ -38,8 +38,6 @@ export class DashboardComponent implements OnInit {
     private dashboardService: DashboardService
   ) {}
 
-
-
   ngOnInit(): void {
     if (!this.loginService.isAuthenticated()) {
       this.router.navigate(['/login']);
@@ -52,11 +50,54 @@ export class DashboardComponent implements OnInit {
     this.loadDashboardData();
   }
 
+  onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0];
+      
+      // Vérification du type de fichier
+      if (!this.isExcelFile(file)) {
+        alert('Veuillez sélectionner un fichier Excel (.xlsx, .xls)');
+        return;
+      }
+
+      this.uploadExcelFile(file);
+    }
+  }
+
+  private isExcelFile(file: File): boolean {
+    const allowedExtensions = ['.xlsx', '.xls'];
+    const fileName = file.name.toLowerCase();
+    return allowedExtensions.some(ext => fileName.endsWith(ext));
+  }
+
+  private uploadExcelFile(file: File) {
+    const formData = new FormData();
+    // Le nom 'file' DOIT correspondre au paramètre [FromForm] IFormFile file dans le contrôleur
+    formData.append('file', file, file.name);
+  
+    this.dashboardService.uploadExcelFile(formData).subscribe({
+      next: (response) => {
+        console.log('Réponse du serveur:', response);
+        alert('Fichier importé avec succès !');
+        this.loadDashboardData(); 
+      },
+      error: (error) => {
+        console.error('Erreur détaillée:', {
+          status: error.status,
+          message: error.error?.title || error.message,
+          details: error.error?.errors // Affiche les détails de validation
+        });
+        alert(`Erreur ${error.status}: ${error.error?.title || 'Échec de l\'import'}`);
+      }
+    });
+  }
+
   private loadDashboardData(): void {
     this.isLoading = true;
     this.errorMessage = '';
   
-    // Appels parallèles avec gestion individuelle
     forkJoin([
       this.dashboardService.getTopAlbums(this.selectedPeriod),
       this.dashboardService.getTopArtists(this.selectedPeriod),
@@ -78,5 +119,22 @@ export class DashboardComponent implements OnInit {
     });
   }
 
+  navigateToDetail(type: 'album' | 'artist' | 'track', item: any): void {
+  let identifier = '';
+  switch(type) {
+    case 'album':
+      identifier = `${item.title}|${item.artist}`;
+      break;
+    case 'artist':
+      identifier = item.artist;
+      break;
+    case 'track':
+      identifier = `${item.track}|${item.album}|${item.artist}`;
+      break;
+  }
 
+  this.router.navigate(['/detail', type], { 
+    queryParams: { identifier } 
+  });
+}
 }

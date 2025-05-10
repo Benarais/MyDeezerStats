@@ -23,6 +23,85 @@ namespace MyDeezerStats.Application.DeezerServices
         public async Task EnrichAlbumWithDeezerData(AlbumInfos? album)
         {
             if (album is null)
+            {
+                _logger.LogWarning("Album is null, skipping enrichment.");
+                return;
+            }
+
+            var query = HttpUtility.UrlEncode($"{album.Artist} {album.Title}");
+            var searchUrl = $"{DeezerApiBaseUrl}/search/album?q={query}";
+
+            _logger.LogInformation("Searching album: {Query}", query);
+
+            var searchData = await GetJsonArrayFromUrl(searchUrl);
+            if (searchData is null || searchData.Value.ValueKind != JsonValueKind.Array || !searchData.Value.EnumerateArray().Any())
+            {
+                _logger.LogWarning("No search data found for album: {Query}", query);
+                return;
+            }
+
+            foreach (var item in searchData.Value.EnumerateArray())
+            {
+                if (item.TryGetProperty("title", out var albumTitleProp) &&
+                    item.TryGetProperty("artist", out var artistProp) &&
+                    artistProp.TryGetProperty("name", out var artistNameProp))
+                {
+                    var albumTitle = albumTitleProp.GetString();
+                    var artistName = artistNameProp.GetString();
+
+                    _logger.LogDebug("Found album: {AlbumTitle} by {ArtistName}", albumTitle, artistName);
+
+                    if (string.Equals(albumTitle, album.Title, StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals(artistName, album.Artist, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (item.TryGetProperty("id", out var albumIdProp))
+                        {
+                            var albumId = albumIdProp.GetInt32();
+                            var albumDetailsUrl = $"{DeezerApiBaseUrl}/album/{albumId}";
+
+                            _logger.LogInformation("Match found, retrieving album details from: {Url}", albumDetailsUrl);
+
+                            var albumDetails = await GetJsonFromUrl(albumDetailsUrl);
+                            if (albumDetails.HasValue)
+                            {
+                                // Protection contre les clés manquantes dans les réponses
+                                if (albumDetails.Value.TryGetProperty("cover_big", out var coverProp))
+                                {
+                                    album.AlbumUrl = coverProp.GetString() ?? string.Empty;
+                                }
+
+                                if (albumDetails.Value.TryGetProperty("duration", out var durationProp))
+                                {
+                                    album.Duration = durationProp.GetInt32();
+                                }
+
+                                _logger.LogInformation("Album enriched with cover and duration.");
+                            }
+                            else
+                            {
+                                _logger.LogWarning("No album details found for album ID: {AlbumId}", albumId);
+                            }
+                        }
+                        else
+                        {
+                            _logger.LogWarning("No album ID found for album: {AlbumTitle} by {ArtistName}", albumTitle, artistName);
+                        }
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("Missing expected properties in search result for album: {AlbumTitle} by {ArtistName}", album.Title, album.Artist);
+                }
+            }
+        }
+
+
+    
+
+
+      /**  public async Task EnrichAlbumWithDeezerData(AlbumInfos? album)
+        {
+            if (album is null)
                 return;
 
             var query = HttpUtility.UrlEncode($"{album.Artist} {album.Title}");
@@ -64,7 +143,67 @@ namespace MyDeezerStats.Application.DeezerServices
                     break;
                 }
             }
-        }
+        }**/
+
+        /**public async Task EnrichAlbumWithDeezerData(AlbumInfos? album)
+        {
+            if (album is null)
+                return;
+
+            var query = HttpUtility.UrlEncode($"{album.Artist} {album.Title}");
+            var searchUrl = $"{DeezerApiBaseUrl}/search/album?q={query}";
+
+            _logger.LogInformation("Searching album: {Query}", query);
+
+            var searchData = await GetJsonArrayFromUrl(searchUrl);
+            if (searchData is null)
+            {
+                _logger.LogWarning("No search data found for album: {Query}", query);
+                return;
+            }
+
+            foreach (var item in searchData.Value.EnumerateArray())
+            {
+                if (item.TryGetProperty("title", out var albumTitleProp) && albumTitleProp.ValueKind == JsonValueKind.String)
+                {
+                    var albumTitle = albumTitleProp.GetString();
+                    if (item.TryGetProperty("artist", out var artistProp) && artistProp.TryGetProperty("name", out var artistNameProp))
+                    {
+                        var artistName = artistNameProp.GetString();
+
+                        _logger.LogDebug("Found album: {AlbumTitle} by {ArtistName}", albumTitle, artistName);
+
+                        if (string.Equals(albumTitle, album.Title, StringComparison.OrdinalIgnoreCase) &&
+                            string.Equals(artistName, album.Artist, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (item.TryGetProperty("id", out var albumIdProp) && albumIdProp.ValueKind == JsonValueKind.Number)
+                            {
+                                var albumId = albumIdProp.GetInt32();
+                                var albumDetailsUrl = $"{DeezerApiBaseUrl}/album/{albumId}";
+
+                                _logger.LogInformation("Match found, retrieving album details from: {Url}", albumDetailsUrl);
+
+                                var albumDetails = await GetJsonFromUrl(albumDetailsUrl);
+                                if (albumDetails.HasValue)
+                                {
+                                    if (albumDetails.Value.TryGetProperty("cover_big", out var coverUrlProp))
+                                    {
+                                        album.AlbumUrl = coverUrlProp.GetString() ?? string.Empty;
+                                    }
+                                    if (albumDetails.Value.TryGetProperty("duration", out var durationProp) && durationProp.ValueKind == JsonValueKind.Number)
+                                    {
+                                        album.Duration = durationProp.GetInt32();
+                                    }
+
+                                    _logger.LogInformation("Album enriched with cover and duration.");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }**/
+
 
         public async Task EnrichTrackWithDeezerData(TrackInfos? track)
         {
@@ -200,16 +339,6 @@ namespace MyDeezerStats.Application.DeezerServices
                        .Replace("-", "")
                        .Replace("'", "")
                        .Replace("&", "and");
-        }
-
-        // Fallback si l'enrichissement échoue
-        private void ApplyFallbackValues(TrackInfos track)
-        {
-            const int defaultDuration = 180; // 3 minutes par défaut
-            const string defaultCover = "https://e-cdns-images.dzcdn.net/images/cover/default-500x500.png";
-
-            if (track.Duration <= 0) track.Duration = defaultDuration;
-            if (string.IsNullOrWhiteSpace(track.TrackUrl)) track.TrackUrl = defaultCover;
         }
 
         public async Task EnrichArtistWithDeezerData(ArtistInfos? artist)

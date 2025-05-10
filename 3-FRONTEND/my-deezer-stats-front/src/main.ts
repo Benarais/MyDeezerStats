@@ -4,8 +4,8 @@ import { provideRouter } from '@angular/router';
 import { HTTP_INTERCEPTORS } from '@angular/common/http';
 import { AppComponent } from './app/app.component';
 import { routes } from './app/app.routes';
-import { LoginService } from './app/services/login.service'; // Ajustez le chemin
-import { JwtInterceptor } from './app/interceptors/jwt.interceptor'; // Ajustez le chemin
+import { LoginService } from './app/services/login.service'; 
+import { JwtInterceptor } from './app/interceptors/jwt.interceptor'; 
 
 bootstrapApplication(AppComponent, {
   providers: [

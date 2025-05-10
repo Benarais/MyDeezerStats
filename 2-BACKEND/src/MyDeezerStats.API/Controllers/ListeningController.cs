@@ -24,6 +24,7 @@ namespace MyDeezerStats.API.Controllers
         {
             _logger.LogInformation("GET /top-albums called with from={From} to={To}", from, to);
             var result = await _service.GetTopAlbumsAsync(from, to);
+            _logger.LogInformation($"Found {result}");
             return Ok(result);
         }
 
@@ -33,6 +34,7 @@ namespace MyDeezerStats.API.Controllers
         {
             _logger.LogInformation("GET /top-artists called with from={From} to={To}", from, to);
             var result = await _service.GetTopArtistsAsync(from, to);
+            _logger.LogInformation($"Found {result}");
             return Ok(result);
         }
 
@@ -42,6 +44,7 @@ namespace MyDeezerStats.API.Controllers
         {
             _logger.LogInformation("GET /top-tracks called with from={From} to={To}", from, to);
             var result = await _service.GetTopTracksAsync(from, to);
+            _logger.LogInformation($"Found {result}");
             return Ok(result);
         }
 

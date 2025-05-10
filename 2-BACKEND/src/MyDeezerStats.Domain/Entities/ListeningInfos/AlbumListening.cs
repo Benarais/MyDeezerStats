@@ -10,7 +10,8 @@ namespace MyDeezerStats.Domain.Entities.ListeningInfos
     {
         public string Title { get; set; } = string.Empty;
         public string Artist { get; set; } = string.Empty;
+        public List<string> AllArtists { get; set; } = [];
         public int StreamCount { get; set; }
-        public Dictionary<string, int> StreamCountByTrack { get; set; } = new Dictionary<string, int>();
+        public Dictionary<string, int> StreamCountByTrack { get; set; } = [];
     }
 }

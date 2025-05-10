@@ -32,44 +32,30 @@ namespace MyDeezerStats.Infrastructure.Mongo.Informations
 
         public async Task<AlbumInfos?> GetAlbumInfosAsync(string artist, string album)
         {
-            var collection = _database.GetCollection<BsonDocument>("albumInfo"); 
+            var collection = _database.GetCollection<BsonDocument>("albumInfo");
 
             var filter = Builders<BsonDocument>.Filter.Eq("Artist", artist) &
-                         Builders<BsonDocument>.Filter.Eq("Album", album);
+                         Builders<BsonDocument>.Filter.Eq("Title", album);
 
             var projection = Builders<BsonDocument>.Projection
-                .Include("Track")
+                .Include("Title")
+                .Include("Artist")
                 .Include("Duration")
+                .Include("TrackNumber")
                 .Include("AlbumUrl");
 
-            var tracks = await collection.Find(filter).Project(projection).ToListAsync();
+            var document = await collection.Find(filter).Project(projection).FirstOrDefaultAsync();
 
-            if (tracks == null || !tracks.Any())
+            if (document == null)
                 return null;
-
-            int totalDuration = 0;
-            var uniqueTracks = new HashSet<string>();
-            string? albumUrl = null;
-
-            foreach (var track in tracks)
-            {
-                if (track.Contains("Track"))
-                    uniqueTracks.Add(track["Track"].AsString);
-
-                if (track.Contains("Duration") && track["Duration"].IsInt32)
-                    totalDuration += track["Duration"].AsInt32;
-
-                if (albumUrl == null && track.Contains("AlbumUrl"))
-                    albumUrl = track["AlbumUrl"].AsString;
-            }
 
             return new AlbumInfos
             {
-                Title = album,
-                Artist = artist,
-                Duration = totalDuration,
-                TrackNumber = uniqueTracks.Count,
-                AlbumUrl = albumUrl ?? string.Empty
+                Title = document.GetValue("Title", "").AsString,
+                Artist = document.GetValue("Artist", "").AsString,
+                Duration = document.GetValue("Duration", 0).AsInt32,
+                TrackNumber = document.GetValue("TrackNumber", 0).AsInt32,
+                AlbumUrl = document.GetValue("AlbumUrl", "").AsString
             };
         }
 
@@ -122,13 +108,11 @@ namespace MyDeezerStats.Infrastructure.Mongo.Informations
 
             return new TrackInfos
             {
-                Title = doc.GetValue("Title", "").AsString,
-                Album = doc.GetValue("Album", "").AsString,
-                Artist = doc.GetValue("Artist", "").AsString,
-                TrackUrl = doc.GetValue("TrackUrl", "").AsString,
-                Duration = doc.Contains("Duration") && doc["Duration"].IsInt32
-                    ? doc["Duration"].AsInt32
-                    : 0
+                Title = doc.TryGetValue("Title", out var titleVal) && titleVal.IsString ? titleVal.AsString : "",
+                Album = doc.TryGetValue("Album", out var albumVal) && albumVal.IsString ? albumVal.AsString : "",
+                Artist = doc.TryGetValue("Artist", out var artistVal) && artistVal.IsString ? artistVal.AsString : "",
+                TrackUrl = doc.TryGetValue("TrackUrl", out var urlVal) && urlVal.IsString ? urlVal.AsString : "",
+                Duration = doc.TryGetValue("Duration", out var durationVal) && durationVal.IsInt32 ? durationVal.AsInt32 : 0
             };
         }
 
@@ -168,17 +152,56 @@ namespace MyDeezerStats.Infrastructure.Mongo.Informations
         {
             if (track == null) throw new ArgumentNullException(nameof(track));
 
+            // Normalisation des données
+            track.Title = string.IsNullOrWhiteSpace(track.Title) ? "Unknown Title" : track.Title.Trim();
+            track.Artist = string.IsNullOrWhiteSpace(track.Artist) ? "Unknown Artist" : track.Artist.Trim();
+
             var collection = _database.GetCollection<TrackInfos>("trackInfo");
 
+            // Filtre plus flexible pour l'upsert
             var filter = Builders<TrackInfos>.Filter.And(
                 Builders<TrackInfos>.Filter.Eq(t => t.Title, track.Title),
-                Builders<TrackInfos>.Filter.Eq(t => t.Album, track.Album),
                 Builders<TrackInfos>.Filter.Eq(t => t.Artist, track.Artist)
             );
 
             var options = new ReplaceOptions { IsUpsert = true };
 
-            await collection.ReplaceOneAsync(filter, track, options);
+            try
+            {
+                await collection.ReplaceOneAsync(filter, track, options);
+            }
+            catch (MongoWriteException ex) when (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
+            {
+                // Fallback pour les cas de duplication
+                if (ex.WriteError.Message.Contains("Artist_1_Track_1"))
+                {
+                    // Solution 1: Générer un ID artificiel pour le Track
+                    track.Title = $"{track.Title}_{Guid.NewGuid().ToString("N").Substring(0, 4)}";
+                    await collection.ReplaceOneAsync(filter, track, options);
+                }
+                else
+                {
+                    throw; // Relancer les autres types d'erreurs
+                }
+            }
         }
+
+       /* public async Task InsertTrackInfosAsync(TrackInfos track)
+        {
+            if (track == null) throw new ArgumentNullException(nameof(track));
+
+            var collection = _database.GetCollection<TrackInfos>("trackInfo");
+
+            var filter = Builders<TrackInfos>.Filter.And(
+                Builders<TrackInfos>.Filter.Eq(t => t.Title, track.Title),
+                Builders<TrackInfos>.Filter.Eq(t => t.Album, track.Album),
+                Builders<TrackInfos>.Filter.Eq(t => t.Artist, track.Artist),
+                Builders<TrackInfos>.Filter.Eq(t => t.TrackUrl, track.TrackUrl)
+            );
+
+            var options = new ReplaceOptions { IsUpsert = true };
+
+            await collection.ReplaceOneAsync(filter, track, options);
+        }*/
     }
 }
