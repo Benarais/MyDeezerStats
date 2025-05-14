@@ -283,7 +283,7 @@ namespace MyDeezerStats.Application.DeezerServices
                     trackDuration = trackDetail.Duration;
                     trackListeningTime = playCount * trackDuration;
                     trackUrl = trackDetail.CoverUrl;
-                    trackAlbum = trackDetail.Album;
+                    trackAlbum = trackDetail.Album.Title;
                 }
 
                 totalListeningTime += trackListeningTime;
@@ -478,9 +478,9 @@ namespace MyDeezerStats.Application.DeezerServices
                              && album.TryGetProperty("cover_big", out var cover)
                               ? cover.GetString() ?? string.Empty
                               : string.Empty,
-                    Album = firstResult.TryGetProperty("album", out var albumElement)
+                    Album = new DeezerAlbum {Title = firstResult.TryGetProperty("album", out var albumElement)
                             ? albumElement.GetProperty("title").GetString() ?? string.Empty
-                            : string.Empty
+                            : string.Empty}
                 };
             }
             catch

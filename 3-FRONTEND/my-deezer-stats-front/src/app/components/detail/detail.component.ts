@@ -4,7 +4,7 @@ import { LoginService } from '../../services/login.service';
 import { Router, ActivatedRoute } from '@angular/router';
 import { DetailService } from '../../services/detail.service';
 import { DurationPipe } from '../../shared/pipes/duration.pipe';
-import { AlbumItem, ArtistItem, TrackItem, DetailItem } from '../../models/detail.models';
+import { AlbumItem, ArtistItem, DetailItem } from '../../models/detail.models';
 
 @Component({
   selector: 'app-detail',
@@ -82,39 +82,39 @@ export class DetailComponent implements OnInit {
     this.location.back();
   }
 
-  // Type guards améliorés
-  isAlbum(item: DetailItem): item is AlbumItem {
-    return item?.type === 'album';
-  }
+  // // Type guards améliorés
+  // isAlbum(item: DetailItem): item is AlbumItem {
+  //   return item?.type === 'album';
+  // }
 
-  isArtist(item: DetailItem): item is ArtistItem {
-    return item?.type === 'artist';
-  }
+  // isArtist(item: DetailItem): item is ArtistItem {
+  //   return item?.type === 'artist';
+  // }
 
-  // Méthodes helpers pour le template
-  getCoverUrl(): string {
-    return this.item?.coverUrl || 'assets/default-cover.jpg';
-  }
+  // // Méthodes helpers pour le template
+  // getCoverUrl(): string {
+  //   return this.item?.coverUrl || 'assets/default-cover.jpg';
+  // }
 
-  getMainTitle(): string {
-    if (!this.item) return '';
+  // getMainTitle(): string {
+  //   if (!this.item) return '';
     
-    if (this.isAlbum(this.item)) {
-      return this.item.title || this.item.artist || '';
-    } else if (this.isArtist(this.item)) {
-      return this.item.artist;
-    } 
-    return '';
-  }
+  //   if (this.isAlbum(this.item)) {
+  //     return this.item.title || this.item.artist || '';
+  //   } else if (this.isArtist(this.item)) {
+  //     return this.item.artist;
+  //   } 
+  //   return '';
+  // }
 
-  showArtistSubtitle(): boolean {
-    if (!this.item) return false;
+  // showArtistSubtitle(): boolean {
+  //   if (!this.item) return false;
     
-    if (this.isAlbum(this.item)) {
-      return !!this.item.artist && !!this.item.title;
-    } 
-    return false;
-  }
+  //   if (this.isAlbum(this.item)) {
+  //     return !!this.item.artist && !!this.item.title;
+  //   } 
+  //   return false;
+  // }
 
  
 }

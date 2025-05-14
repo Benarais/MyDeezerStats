@@ -13,6 +13,6 @@ namespace MyDeezerStats.Domain.Entities.DeezerApi
         public string Preview { get; set; } = string.Empty;
         public string CoverUrl { get; set; } = string.Empty;
         public DeezerArtist Artist { get; set; } = new();
-        public string Album { get; set; } = string.Empty;
+        public DeezerAlbum Album { get; set; } = new();
     }
 }

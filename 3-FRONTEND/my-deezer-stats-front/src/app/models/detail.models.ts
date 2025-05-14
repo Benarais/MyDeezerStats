@@ -9,38 +9,19 @@ export interface AlbumItem extends BaseItem {
   title?: string;
   artist?: string;
   playCount?: number;
-  totalDuration?: number;
+  totalDuration: number;
+  totalListening: number;
   releaseDate?: string;
-  tracks: Track[];
+  trackInfos: Track[];
 }
 
 export interface ArtistItem extends BaseItem {
   type: 'artist';
   artist: string;
-  albumCount?: number;
-  trackCount?: number;
-  popularity?: number;
-  topAlbums?: Array<{
-    title: string;
-    coverUrl?: string;
-    releaseDate?: string;
-  }>;
+  playCount?: number;
+  totalListening: number;
+  nbFans? : number;
+  trackInfos: Track[];
 }
 
-export interface TrackItem extends BaseItem {
-  type: 'track';
-  album?: string;
-  artist?: string;
-  name?: string;
-  duration?: number;
-  firstPlayed?: string;
-  lastPlayed?: string;
-  playHistory?: PlayHistory[];
-}
-
-export interface PlayHistory {
-  date: string;
-  count: number;
-}
-
-export type DetailItem = AlbumItem | ArtistItem | TrackItem;
+export type DetailItem = AlbumItem | ArtistItem ;

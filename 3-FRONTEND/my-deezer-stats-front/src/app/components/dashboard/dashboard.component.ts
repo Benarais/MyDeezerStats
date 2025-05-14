@@ -19,9 +19,9 @@ export class DashboardComponent implements OnInit {
   topArtists: Artist[] = [];
   topTracks: Track[] = [];
   recentListens: Recent[] = [];
-
   isLoading: boolean = false;
   errorMessage: string = '';
+  
 
   periods = [
     { value: '4weeks', label: '4 dernières semaines' },
@@ -42,12 +42,16 @@ export class DashboardComponent implements OnInit {
     if (!this.loginService.isAuthenticated()) {
       this.router.navigate(['/login']);
     } else {
-      this.loadDashboardData();  
+      this.loadDashboardData();
+      //console.log(this.recentListens.length);  
     }
   }
 
   onPeriodChange(): void {
+    this.isLoading = true;
+    this.dashboardService.last4Weeks = new Date(this.recentListens[0].date);
     this.loadDashboardData();
+    this.isLoading  = false;
   }
 
   onFileSelected(event: Event) {
@@ -73,6 +77,8 @@ export class DashboardComponent implements OnInit {
   }
 
   private uploadExcelFile(file: File) {
+    this.isLoading = true;
+    console.log(this.isLoading);
     const formData = new FormData();
     formData.append('file', file, file.name);
     this.dashboardService.uploadExcelFile(formData).subscribe({
@@ -88,6 +94,7 @@ export class DashboardComponent implements OnInit {
           details: error.error?.errors // Affiche les détails de validation
         });
         alert(`Erreur ${error.status}: ${error.error?.title || 'Échec de l\'import'}`);
+        this.isLoading = false;
       }
     });
   }
@@ -115,9 +122,10 @@ export class DashboardComponent implements OnInit {
         console.error('Détail :', err);
       }
     });
+    this.isLoading = false;
   }
 
-  navigateToDetail(type: 'album' | 'artist' | 'track', item: any): void {
+  navigateToDetail(type: 'album' | 'artist', item: any): void {
   let identifier = '';
     console.log(`Item received for ${type}:`, item);
   switch (type) {
@@ -129,13 +137,7 @@ export class DashboardComponent implements OnInit {
 
     case 'artist':
       identifier = item.artist ?? '';
-      break;
-
-    case 'track':
-      const trackName = item.track ?? '';
-      const trackAlbum = item.album ?? '';
-      const trackArtist = item.artist ?? '';
-      identifier = trackName && trackAlbum && trackArtist ? `${trackName}|${trackAlbum}|${trackArtist}` : '';
+      console.log(identifier);
       break;
   }
 
@@ -148,24 +150,4 @@ export class DashboardComponent implements OnInit {
   }
 }
 
-
-  /*navigateToDetail(type: 'album' | 'artist' | 'track', item: any): void {
-  let identifier = '';
-  switch(type) {
-    case 'album':
-      identifier = `${item.title}|${item.artist}`;
-      console.log(identifier);
-      break;
-    case 'artist':
-      identifier = item.artist;
-      break;
-    case 'track':
-      identifier = `${item.track}|${item.album}|${item.artist}`;
-      break;
-  }
-
-  this.router.navigate(['/detail', type], { 
-    queryParams: { identifier } 
-  });
-}*/
 }

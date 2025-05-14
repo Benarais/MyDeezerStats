@@ -22,6 +22,7 @@ export interface Track{
   count: number;
   duration: number;
   totalListening: number;
+  lastListen: string;
 }
 
 export interface Recent {

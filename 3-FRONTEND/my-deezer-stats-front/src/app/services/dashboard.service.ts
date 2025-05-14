@@ -9,7 +9,7 @@ import { Album, Artist, Track, Recent } from '../models/dashboard.models';
 export class DashboardService {
   
   private readonly apiUrl = 'http://localhost:5000/api';
-
+  last4Weeks: Date = new Date();
   constructor(private http: HttpClient) {}
 
   private getAuthHeaders(): HttpHeaders {
@@ -94,7 +94,7 @@ export class DashboardService {
   
     switch (period) {
       case "4weeks":
-        const fourWeeksAgo = new Date(currentDate);
+        const fourWeeksAgo = this.last4Weeks;
         fourWeeksAgo.setDate(currentDate.getDate() - 28); 
         return { from: fourWeeksAgo, to: currentDate };
   

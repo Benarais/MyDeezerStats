@@ -54,9 +54,8 @@ namespace MyDeezerStats.Application.MongoDbServices
             {
                 throw new ArgumentException("Album identifier must contain title and artist", nameof(fullId));
             }
-
-            string title = parts[0];
-            string artist = parts[1];
+            var title = Uri.UnescapeDataString(parts[0]);
+            var artist = Uri.UnescapeDataString(parts[1]);
 
             AlbumListening album = await _repository.GetAlbumsWithAsync(title, artist, null, null)
                 ?? throw new NotFoundException($"Album {title} by {artist} not found");

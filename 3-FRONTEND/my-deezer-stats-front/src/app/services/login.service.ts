@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, throwError } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 export interface AuthResponse {
   token?: string;
@@ -8,6 +9,7 @@ export interface AuthResponse {
 
 export interface SignInResponse {
   isSuccess?: boolean;
+  message?: string; // Ajouter un message d'erreur ou de succès
 }
 
 @Injectable({ providedIn: 'root' })
@@ -17,15 +19,29 @@ export class LoginService {
 
   constructor(private http: HttpClient) {}
 
+  // Login
   login(email: string, password: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/login`, { email, password });
+    return this.http.post<AuthResponse>(`${this.apiUrl}/login`, { email, password })
+      .pipe(
+        catchError(error => {
+          console.error('Erreur lors de la connexion', error);
+          return throwError(() => new Error('Échec de la connexion'));
+        })
+      );
   }
 
-   // Méthode pour créer un compte
-  signUp(email: string, password: string): Observable<boolean> {
-    return this.http.post<boolean>(`${this.apiUrl}/signup`, { email, password });
+  // Inscription
+  signUp(email: string, password: string): Observable<SignInResponse> {
+    return this.http.post<SignInResponse>(`${this.apiUrl}/signup`, { email, password })
+      .pipe(
+        catchError(error => {
+          console.error('Erreur lors de l\'inscription', error);
+          return throwError(() => new Error('Échec de l\'inscription'));
+        })
+      );
   }
 
+  // Déconnexion
   logout(): void {
     localStorage.removeItem(this.TOKEN_KEY);
   }
@@ -36,14 +52,13 @@ export class LoginService {
     return token !== null && !this.isTokenExpired(token);   
   }
 
-  // Méthode pour vérifier si le token est expiré
+  // Vérifie si le token est expiré
   private isTokenExpired(token: string): boolean {
     try {
       const decoded = this.decodeToken(token); // Décode le token
-      const expiry = decoded.exp; // Récupère la date d'expiration du token
-      if (!expiry) return false; // Si pas de date d'expiration, on suppose que le token n'est pas expiré
-  
-      const now = Math.floor(Date.now() / 1000); // Heure actuelle en secondes (UTC)
+      const expiry = decoded.exp; // Récupère la date d'expiration
+      if (!expiry) return false; // Si pas de date d'expiration, on suppose qu'il n'est pas expiré
+      const now = Math.floor(Date.now() / 1000); // Heure actuelle en secondes
       return now >= expiry; // Compare la date d'expiration avec l'heure actuelle
     } catch (e) {
       console.error('Erreur de décodage du token', e);
@@ -51,8 +66,8 @@ export class LoginService {
     }
   }
 
-   // Méthode pour décoder le token JWT (en supposant qu'il est au format JWT)
-   private decodeToken(token: string): any {
+  // Décode le token JWT
+  private decodeToken(token: string): any {
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
     const decoded = decodeURIComponent(
@@ -61,10 +76,8 @@ export class LoginService {
     return JSON.parse(decoded);
   }
 
-
-   // Récupère le token du localStorage
-   getToken(): string | null {
+  // Récupère le token du localStorage
+  getToken(): string | null {
     return localStorage.getItem(this.TOKEN_KEY);
   }
-
 }

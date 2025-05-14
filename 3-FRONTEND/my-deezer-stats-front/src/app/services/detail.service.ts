@@ -1,7 +1,7 @@
 import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { catchError, throwError, Observable } from 'rxjs';
-import { AlbumItem, ArtistItem, TrackItem, DetailItem } from '../models/detail.models';
+import { AlbumItem, ArtistItem, DetailItem } from '../models/detail.models';
 
 @Injectable({
   providedIn: 'root'
@@ -33,7 +33,7 @@ export class DetailService {
     case 'album':
       endpoint = `/listening/album`;
       return this.http.get<AlbumItem>(`${this.apiUrl}${endpoint}`, {
-        params: { identifier }, // Ajout de identifier comme paramètre de query string
+        params: { identifier }, 
         headers: this.getAuthHeaders()
       }).pipe(
         catchError(this.handleError)
@@ -41,7 +41,7 @@ export class DetailService {
     case 'artist':
       endpoint = `/listening/artist`;
       return this.http.get<ArtistItem>(`${this.apiUrl}${endpoint}`, {
-        params: { identifier }, // Ajout de identifier comme paramètre de query string
+        params: { identifier },
         headers: this.getAuthHeaders()
       }).pipe(
         catchError(this.handleError)
@@ -51,27 +51,4 @@ export class DetailService {
   }
 }
 
-
- /* getDetails(type: 'album' | 'artist', identifier: string): Observable<DetailItem> {
-    let endpoint = '';
-
-    switch (type) {
-      case 'album':
-        endpoint = `/listening/album/${identifier}`;
-        return this.http.get<AlbumItem>(`${this.apiUrl}${endpoint}`, {
-          headers: this.getAuthHeaders()
-        }).pipe(
-          catchError(this.handleError)
-        );
-      case 'artist':
-        endpoint = `/listening/artist/${identifier}`;
-        return this.http.get<ArtistItem>(`${this.apiUrl}${endpoint}`, {
-          headers: this.getAuthHeaders()
-        }).pipe(
-          catchError(this.handleError)
-        );
-      default:
-        throw new Error('Type non supporté : ' + type);
-    }
-  }*/
 }
