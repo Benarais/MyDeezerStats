@@ -1,9 +1,9 @@
-﻿using System.Collections.Concurrent;
+﻿
 using Microsoft.Extensions.Logging;
 using MyDeezerStats.Application.Dtos;
 using MyDeezerStats.Application.Interfaces;
-using MyDeezerStats.Domain.Entities.DeezerInfos;
 using MyDeezerStats.Domain.Entities.ListeningInfos;
+using MyDeezerStats.Domain.Exceptions;
 using MyDeezerStats.Domain.Repositories;
 
 namespace MyDeezerStats.Application.MongoDbServices
@@ -27,136 +27,82 @@ namespace MyDeezerStats.Application.MongoDbServices
             _logger = logger;
         }
 
-        public async Task<List<DeezerAlbumInfos>> GetTopAlbumsAsync(DateTime? from, DateTime? to)
+        public async Task<List<ShortAlbumInfos>> GetTopAlbumsAsync(DateTime? from, DateTime? to)
         {
             var topAlbums = await _repository.GetTopAlbumsWithAsync(from, to, 10);
 
             var albumTasks = topAlbums.Select(async album =>
             {
-                var currentAlbum = new DeezerAlbumInfos
-                {
-                    Title = album.Title,
-                    Artist = album.Artist,
-                    Count = album.StreamCount
-                };
-
-                var albumInfoTask = _informationRepository.GetAlbumInfosAsync(album.Artist, album.Title);
-                var trackInfoTasks = album.StreamCountByTrack.Select(trackNameCount =>
-                    _informationRepository.GetTrackInfosAsync(trackNameCount.Key, album.Artist)).ToList();
-
-                var albumInfo = await albumInfoTask ?? new AlbumInfos { Title = album.Title, Artist = album.Artist };
-
-                if (!IsAlbumInfoComplete(albumInfo))
-                {
-                    await _deezerService.EnrichAlbumWithDeezerData(albumInfo);
-                    await _informationRepository.InsertAlbumInfosAsync(albumInfo);
-                }
-
-                currentAlbum.TotalDuration = albumInfo.Duration;
-                currentAlbum.CoverUrl = albumInfo.AlbumUrl;
-
-                var trackInfos = await Task.WhenAll(trackInfoTasks);
-
-                var enrichmentTasks = trackInfos.Select(async (trackInfo, index) =>
-                {
-                    var trackNameCount = album.StreamCountByTrack.ElementAt(index);
-                    trackInfo ??= new TrackInfos { Title = trackNameCount.Key, Album = album.Title, Artist = album.Artist };
-
-                    if (!IsTrackInfoComplete(trackInfo))
-                    {
-                        await _deezerService.EnrichTrackWithDeezerData(trackInfo);
-                        await _informationRepository.InsertTrackInfosAsync(trackInfo);
-                    }
-
-                    return trackNameCount.Value * trackInfo.Duration;
-                });
-
-                var listeningDurations = await Task.WhenAll(enrichmentTasks);
-                currentAlbum.TotalListening = listeningDurations.Sum();
-
-                return currentAlbum;
+                ShortAlbumInfos enrichedAlbum = await _deezerService.EnrichShortAlbumWithDeezerData(album);
+                enrichedAlbum.Count = album.StreamCount;
+                return enrichedAlbum;
             });
 
             var result = await Task.WhenAll(albumTasks);
             return result.ToList();
         }
 
-        public async Task<List<DeezerArtistInfos>> GetTopArtistsAsync(DateTime? from, DateTime? to)
+        public async Task<FullAlbumInfos> GetAlbumAsync(string fullId)
         {
-            var topArtist = await _repository.GetTopArtistsWithAsync(from, to, 10);
-            var artistTasks = topArtist.Select(async artist =>
+            if (string.IsNullOrWhiteSpace(fullId) || !fullId.Contains('|'))
             {
-                var currentArtist = new DeezerArtistInfos
-                {
-                    Artist = artist.Name,
-                    Count = artist.StreamCount
-                };
+                throw new ArgumentException("Invalid album identifier format", nameof(fullId));
+            }
 
-                var artistInfoTask = _informationRepository.GetArtistInfosAsync(artist.Name);
-                var trackInfoTasks = artist.StreamCountByTrack.Select(trackNameCount =>
-                    _informationRepository.GetTrackInfosAsync(trackNameCount.Key, artist.Name)).ToList();
+            var parts = fullId.Split('|');
+            if (parts.Length < 2)
+            {
+                throw new ArgumentException("Album identifier must contain title and artist", nameof(fullId));
+            }
 
-                var artistInfo = await artistInfoTask ?? new ArtistInfos { Name = artist.Name  };
+            string title = parts[0];
+            string artist = parts[1];
 
-                if (!IsArtistInfoComplete(artistInfo))
-                {
-                    await _deezerService.EnrichArtistWithDeezerData(artistInfo);
-                    await _informationRepository.InsertArtistInfosAsync(artistInfo);
-                }
+            AlbumListening album = await _repository.GetAlbumsWithAsync(title, artist, null, null)
+                ?? throw new NotFoundException($"Album {title} by {artist} not found");
 
-                currentArtist.CoverUrl = artistInfo.ArtistUrl;
-                var trackInfos = await Task.WhenAll(trackInfoTasks);
+            FullAlbumInfos enrichedAlbum = await _deezerService.EnrichFullAlbumWithDeezerData(album);
 
-                var enrichmentTasks = trackInfos.Select(async (trackInfo, index) =>
-                {
-                    var trackNameCount = artist.StreamCountByTrack.ElementAt(index);
-                    trackInfo ??= new TrackInfos { Title = trackNameCount.Key, Artist = artist.Name };
+            return enrichedAlbum;
+        }
 
-                    if (!IsTrackInfoComplete(trackInfo))
-                    {
-                        await _deezerService.EnrichTrackWithDeezerData(trackInfo);
-                        await _informationRepository.InsertTrackInfosAsync(trackInfo);
-                    }
-
-                    return trackNameCount.Value * trackInfo.Duration;
-                });
-
-                var listeningDurations = await Task.WhenAll(enrichmentTasks);
-                currentArtist.TotalListening = listeningDurations.Sum();
-
-                return currentArtist;
+        public async Task<List<ShortArtistInfos>> GetTopArtistsAsync(DateTime? from, DateTime? to)
+        {
+            var topArtist = await _repository.GetTopArtistWithAsync(from, to, 10);
+            _logger.LogInformation($"Nombre d'artistes récupérés : {topArtist.Count}");
+            var albumTasks = topArtist.Select(async artist =>
+            {
+                ShortArtistInfos enrichedArtist = await _deezerService.EnrichShortArtistWithDeezerData(artist);
+                enrichedArtist.Count = artist.StreamCount;
+                return enrichedArtist;
             });
 
-            var result = await Task.WhenAll(artistTasks);
+            var result = await Task.WhenAll(albumTasks);
             return result.ToList();
         }
-       
-        public async Task<List<DeezerTrackInfos>> GetTopTracksAsync(DateTime? from, DateTime? to)
+
+        public async Task<FullArtistInfos> GetArtistAsync(string fullId)
         {
-            var topTracks = await _repository.GetTopTracksWithAsync(from, to, 10);
-            var trackTasks = topTracks.Select(async track =>
+            if (string.IsNullOrWhiteSpace(fullId))
             {
-                var currentTrack = new DeezerTrackInfos
-                {
-                    Track = track.Name,
-                    Album = track.Album,
-                    Artist = track.Artist,
-                    Count = track.StreamCount,
-                };
+                throw new ArgumentException("Invalid album identifier format", nameof(fullId));
+            }
 
-                var trackInfoTask = _informationRepository.GetTrackInfosAsync(track.Name, track.Artist);
-                var trackInfo = await trackInfoTask ?? new TrackInfos {Title = track.Name, Album = track.Album, Artist = track.Artist};
+            ArtistListening artist = await _repository.GetArtistWithAsync(fullId, null, null)
+                ?? throw new NotFoundException($"Artist {fullId} not found");
 
-                if (!IsTrackInfoComplete(trackInfo))
-                {
-                    await _deezerService.EnrichTrackWithDeezerData(trackInfo);
-                    await _informationRepository.InsertTrackInfosAsync(trackInfo);
-                }
+            FullArtistInfos enrichedArtist = await _deezerService.EnrichFullArtistWithDeezerData(artist);
+            return enrichedArtist;
+        }
+     
+        public async Task<List<ApiTrackInfos>> GetTopTracksAsync(DateTime? from, DateTime? to)
+        {
+            var topTrack = await _repository.GetTopTrackWithAsync(from, to, 10);
 
-                currentTrack.TrackUrl = trackInfo.TrackUrl;
-                currentTrack.Duration = trackInfo.Duration;
-                currentTrack.TotalListening = track.StreamCount * trackInfo.Duration;
-                return currentTrack;
+            var trackTasks = topTrack.Select(async track =>
+            {
+                ApiTrackInfos enrichedTrack = await _deezerService.EnrichTrackWithDeezerData(track);
+                return enrichedTrack;
             });
 
             var result = await Task.WhenAll(trackTasks);
@@ -196,18 +142,6 @@ namespace MyDeezerStats.Application.MongoDbServices
                 throw;
             }
         }
-              
-        private bool IsAlbumInfoComplete(AlbumInfos infos) =>
-            !string.IsNullOrEmpty(infos.AlbumUrl) && infos.Duration > 0;
-
-        private bool IsArtistInfoComplete(ArtistInfos infos) =>
-            !string.IsNullOrEmpty(infos.ArtistUrl);
-
-        private bool IsTrackInfoComplete(TrackInfos infos) =>
-            infos.Duration > 0 && !string.IsNullOrEmpty(infos.TrackUrl);
-
-        
-
         #endregion
     }
 }

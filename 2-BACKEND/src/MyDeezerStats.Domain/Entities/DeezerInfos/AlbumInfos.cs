@@ -10,8 +10,7 @@ namespace MyDeezerStats.Domain.Entities.DeezerInfos
     {
         public string Title { get; set; } = string.Empty;
         public string Artist { get; set; } = string.Empty;
-        public int Duration { get; set; } = 0; 
-        public int TrackNumber { get; set; }
+        public int Duration { get; set; } = 0;
         public string AlbumUrl { get; set; } = string.Empty;
     }
 }

@@ -35,7 +35,7 @@
     <section class="section">
         <h2><i class="fas fa-compact-disc"></i> Top albums</h2>
         <div class="card-list">
-            <div *ngFor="let album of topAlbums; let i = index" class="card" (click)="navigateToDetail('album', album.artist)"
+            <div *ngFor="let album of topAlbums; let i = index" class="card" (click)="navigateToDetail('album', album)"
                  [title]="album.title + (album.artist ? ' - ' + album.artist : '')">
                 <div class="rank">{{ i + 1 }}</div>
                 <img [src]="album.coverUrl || 'assets/default-cover.jpg'" alt="{{ album.title }}" class="card-image" />
@@ -68,7 +68,7 @@
     <section class="section">
         <h2><i class="fas fa-music"></i> Top morceaux</h2>
         <div class="card-list">
-            <div *ngFor="let song of topTracks; let i = index" class="card"  (click)="navigateToDetail('track', song.track)"
+            <div *ngFor="let song of topTracks; let i = index" class="card" 
                  [title]="song.track + ' - ' + song.artist + (song.album ? ' (' + song.album + ')' : '')">
                 <div class="rank">{{ i + 1 }}</div>
                 <img [src]="song.trackUrl || 'assets/default-cover.jpg'" alt="{{ song.track }}" class="card-image" />

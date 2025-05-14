@@ -29,36 +29,6 @@ namespace MyDeezerStats.Infrastructure.Mongo.Informations
             _logger = logger;
         }
 
-
-        public async Task<AlbumInfos?> GetAlbumInfosAsync(string artist, string album)
-        {
-            var collection = _database.GetCollection<BsonDocument>("albumInfo");
-
-            var filter = Builders<BsonDocument>.Filter.Eq("Artist", artist) &
-                         Builders<BsonDocument>.Filter.Eq("Title", album);
-
-            var projection = Builders<BsonDocument>.Projection
-                .Include("Title")
-                .Include("Artist")
-                .Include("Duration")
-                .Include("TrackNumber")
-                .Include("AlbumUrl");
-
-            var document = await collection.Find(filter).Project(projection).FirstOrDefaultAsync();
-
-            if (document == null)
-                return null;
-
-            return new AlbumInfos
-            {
-                Title = document.GetValue("Title", "").AsString,
-                Artist = document.GetValue("Artist", "").AsString,
-                Duration = document.GetValue("Duration", 0).AsInt32,
-                TrackNumber = document.GetValue("TrackNumber", 0).AsInt32,
-                AlbumUrl = document.GetValue("AlbumUrl", "").AsString
-            };
-        }
-
         public async Task<ArtistInfos?> GetArtistInfosAsync(string artist)
         {
             var collection = _database.GetCollection<BsonDocument>("artistInfo");
@@ -116,22 +86,6 @@ namespace MyDeezerStats.Infrastructure.Mongo.Informations
             };
         }
 
-        public async Task InsertAlbumInfosAsync(AlbumInfos album)
-        {
-            if (album == null) throw new ArgumentNullException(nameof(album));
-
-            var collection = _database.GetCollection<AlbumInfos>("albumInfo");
-
-            var filter = Builders<AlbumInfos>.Filter.And(
-                Builders<AlbumInfos>.Filter.Eq(a => a.Title, album.Title),
-                Builders<AlbumInfos>.Filter.Eq(a => a.Artist, album.Artist)
-            );
-
-            var options = new ReplaceOptions { IsUpsert = true };
-
-            await collection.ReplaceOneAsync(filter, album, options);
-        }
-
         public async Task InsertArtistInfosAsync(ArtistInfos artistInfos)
         {
             if (artistInfos == null) throw new ArgumentNullException(nameof(artistInfos));
@@ -186,22 +140,5 @@ namespace MyDeezerStats.Infrastructure.Mongo.Informations
             }
         }
 
-       /* public async Task InsertTrackInfosAsync(TrackInfos track)
-        {
-            if (track == null) throw new ArgumentNullException(nameof(track));
-
-            var collection = _database.GetCollection<TrackInfos>("trackInfo");
-
-            var filter = Builders<TrackInfos>.Filter.And(
-                Builders<TrackInfos>.Filter.Eq(t => t.Title, track.Title),
-                Builders<TrackInfos>.Filter.Eq(t => t.Album, track.Album),
-                Builders<TrackInfos>.Filter.Eq(t => t.Artist, track.Artist),
-                Builders<TrackInfos>.Filter.Eq(t => t.TrackUrl, track.TrackUrl)
-            );
-
-            var options = new ReplaceOptions { IsUpsert = true };
-
-            await collection.ReplaceOneAsync(filter, track, options);
-        }*/
     }
 }

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Bson;
 using MyDeezerStats.Application.Interfaces;
 
 namespace MyDeezerStats.API.Controllers
@@ -18,7 +19,7 @@ namespace MyDeezerStats.API.Controllers
             _logger = logger;
         }
 
-
+        [Authorize]
         [HttpGet("top-albums")]
         public async Task<IActionResult> GetTopAlbums([FromQuery] DateTime? from, [FromQuery] DateTime? to)
         {
@@ -28,17 +29,67 @@ namespace MyDeezerStats.API.Controllers
             return Ok(result);
         }
 
-        //[Authorize]
+        [Authorize]
+        [HttpGet("album")]
+        public async Task<IActionResult> GetAlbum([FromQuery] string? identifier)
+        {
+            _logger.LogInformation("GET /album identifier = {identifier}", identifier);
+
+            if (string.IsNullOrWhiteSpace(identifier))
+            {
+                _logger.LogWarning("Album identifier is null or empty");
+                return BadRequest("Identifier is required");
+            }
+
+            try
+            {
+                var result = await _service.GetAlbumAsync(identifier);
+                _logger.LogInformation("Successfully retrieved album {Identifier}", identifier);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving album {Identifier}", identifier);
+                return StatusCode(500, "An error occurred while processing your request");
+            }
+        }
+
+        [Authorize]
         [HttpGet("top-artists")]
         public async Task<IActionResult> GetTopArtists([FromQuery] DateTime? from, [FromQuery] DateTime? to)
         {
             _logger.LogInformation("GET /top-artists called with from={From} to={To}", from, to);
             var result = await _service.GetTopArtistsAsync(from, to);
-            _logger.LogInformation($"Found {result}");
+            _logger.LogInformation($"Artistes trouvés: {result.Count}");
             return Ok(result);
         }
 
-        //[Authorize]
+        [Authorize]
+        [HttpGet("artist")]
+        public async Task<IActionResult> GetArtist([FromQuery] string? identifier)
+        {
+            _logger.LogInformation("GET /artist identifier = {identifier}", identifier);
+
+            if (string.IsNullOrWhiteSpace(identifier))
+            {
+                _logger.LogWarning("Artist identifier is null or empty");
+                return BadRequest("Identifier is required");
+            }
+
+            try
+            {
+                var result = await _service.GetArtistAsync(identifier);
+                _logger.LogInformation("Successfully retrieved artist {Identifier}", identifier);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving artist {Identifier}", identifier);
+                return StatusCode(500, "An error occurred while processing your request");
+            }
+        }
+
+        [Authorize]
         [HttpGet("top-tracks")]
         public async Task<IActionResult> GetTopTracks([FromQuery] DateTime? from, [FromQuery] DateTime? to)
         {

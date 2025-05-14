@@ -74,9 +74,7 @@ export class DashboardComponent implements OnInit {
 
   private uploadExcelFile(file: File) {
     const formData = new FormData();
-    // Le nom 'file' DOIT correspondre au paramètre [FromForm] IFormFile file dans le contrôleur
     formData.append('file', file, file.name);
-  
     this.dashboardService.uploadExcelFile(formData).subscribe({
       next: (response) => {
         console.log('Réponse du serveur:', response);
@@ -121,9 +119,42 @@ export class DashboardComponent implements OnInit {
 
   navigateToDetail(type: 'album' | 'artist' | 'track', item: any): void {
   let identifier = '';
+    console.log(`Item received for ${type}:`, item);
+  switch (type) {
+    case 'album':
+      const albumTitle = item.title ?? '';
+      const albumArtist = item.artist ?? '';
+      identifier = albumTitle && albumArtist ? `${albumTitle}|${albumArtist}` : '';
+      break;
+
+    case 'artist':
+      identifier = item.artist ?? '';
+      break;
+
+    case 'track':
+      const trackName = item.track ?? '';
+      const trackAlbum = item.album ?? '';
+      const trackArtist = item.artist ?? '';
+      identifier = trackName && trackAlbum && trackArtist ? `${trackName}|${trackAlbum}|${trackArtist}` : '';
+      break;
+  }
+
+  if (identifier) {
+    this.router.navigate(['/detail', type], { 
+      queryParams: { identifier } 
+    });
+  } else {
+    console.warn(`Incomplete data for type: ${type}`);
+  }
+}
+
+
+  /*navigateToDetail(type: 'album' | 'artist' | 'track', item: any): void {
+  let identifier = '';
   switch(type) {
     case 'album':
       identifier = `${item.title}|${item.artist}`;
+      console.log(identifier);
       break;
     case 'artist':
       identifier = item.artist;
@@ -136,5 +167,5 @@ export class DashboardComponent implements OnInit {
   this.router.navigate(['/detail', type], { 
     queryParams: { identifier } 
   });
-}
+}*/
 }

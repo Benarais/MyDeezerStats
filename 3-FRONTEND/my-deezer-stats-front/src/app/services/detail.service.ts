@@ -26,27 +26,46 @@ export class DetailService {
     ));
   }
 
-  getDetails(type: 'album' | 'artist' | 'track', identifier: string): Observable<DetailItem> {
+  getDetails(type: 'album' | 'artist', identifier: string): Observable<DetailItem> {
+  let endpoint = '';
+
+  switch (type) {
+    case 'album':
+      endpoint = `/listening/album`;
+      return this.http.get<AlbumItem>(`${this.apiUrl}${endpoint}`, {
+        params: { identifier }, // Ajout de identifier comme paramètre de query string
+        headers: this.getAuthHeaders()
+      }).pipe(
+        catchError(this.handleError)
+      );
+    case 'artist':
+      endpoint = `/listening/artist`;
+      return this.http.get<ArtistItem>(`${this.apiUrl}${endpoint}`, {
+        params: { identifier }, // Ajout de identifier comme paramètre de query string
+        headers: this.getAuthHeaders()
+      }).pipe(
+        catchError(this.handleError)
+      );
+    default:
+      throw new Error('Type non supporté : ' + type);
+  }
+}
+
+
+ /* getDetails(type: 'album' | 'artist', identifier: string): Observable<DetailItem> {
     let endpoint = '';
 
     switch (type) {
       case 'album':
-        endpoint = `/detail/album/${identifier}`;
+        endpoint = `/listening/album/${identifier}`;
         return this.http.get<AlbumItem>(`${this.apiUrl}${endpoint}`, {
           headers: this.getAuthHeaders()
         }).pipe(
           catchError(this.handleError)
         );
       case 'artist':
-        endpoint = `/detail/artist/${identifier}`;
+        endpoint = `/listening/artist/${identifier}`;
         return this.http.get<ArtistItem>(`${this.apiUrl}${endpoint}`, {
-          headers: this.getAuthHeaders()
-        }).pipe(
-          catchError(this.handleError)
-        );
-      case 'track':
-        endpoint = `/detail/track/${identifier}`;
-        return this.http.get<TrackItem>(`${this.apiUrl}${endpoint}`, {
           headers: this.getAuthHeaders()
         }).pipe(
           catchError(this.handleError)
@@ -54,5 +73,5 @@ export class DetailService {
       default:
         throw new Error('Type non supporté : ' + type);
     }
-  }
+  }*/
 }

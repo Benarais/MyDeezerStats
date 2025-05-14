@@ -31,11 +31,10 @@ export class DetailComponent implements OnInit {
     this.router.navigate(['/login']);
     return;
   }
-
+  
   this.route.params.subscribe(params => {
-    const type = params['type'] as 'album' | 'artist' | 'track';
+    const type = params['type'] as 'album' | 'artist' ;
     const identifier = this.route.snapshot.queryParams['identifier'];
-
     if (identifier) {
       this.loadDetailData(type, identifier);
     } else {
@@ -47,7 +46,7 @@ export class DetailComponent implements OnInit {
 
   
 
-  loadDetailData(type: 'album' | 'artist' | 'track', identifier: string): void {
+  loadDetailData(type: 'album' | 'artist', identifier: string): void {
     this.detailService.getDetails(type, identifier).subscribe({
       next: (data) => {
         this.item = this.mapDataToItem(type, data);
@@ -59,14 +58,12 @@ export class DetailComponent implements OnInit {
     });
   }
 
-  private mapDataToItem(type: 'album' | 'artist' | 'track', data: any): DetailItem {
+  private mapDataToItem(type: 'album' | 'artist' , data: any): DetailItem {
     switch (type) {
       case 'album':
         return { ...data, type } as AlbumItem;
       case 'artist':
         return { ...data, type } as ArtistItem;
-      case 'track':
-        return { ...data, type } as TrackItem;
       default:
         throw new Error('Type non supporté : ' + type);
     }
@@ -94,10 +91,6 @@ export class DetailComponent implements OnInit {
     return item?.type === 'artist';
   }
 
-  isTrack(item: DetailItem): item is TrackItem {
-    return item?.type === 'track';
-  }
-
   // Méthodes helpers pour le template
   getCoverUrl(): string {
     return this.item?.coverUrl || 'assets/default-cover.jpg';
@@ -110,9 +103,7 @@ export class DetailComponent implements OnInit {
       return this.item.title || this.item.artist || '';
     } else if (this.isArtist(this.item)) {
       return this.item.artist;
-    } else if (this.isTrack(this.item)) {
-      return this.item.name || '';
-    }
+    } 
     return '';
   }
 
@@ -121,9 +112,7 @@ export class DetailComponent implements OnInit {
     
     if (this.isAlbum(this.item)) {
       return !!this.item.artist && !!this.item.title;
-    } else if (this.isTrack(this.item)) {
-      return !!this.item.artist && !!this.item.name;
-    }
+    } 
     return false;
   }
 
