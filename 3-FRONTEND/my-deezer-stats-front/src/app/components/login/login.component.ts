@@ -1,8 +1,9 @@
 import { Component } from '@angular/core';
-import { LoginService, SignInResponse } from '../../services/login.service';
+import { LoginService } from '../../services/login.service';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { SignUpResponse } from '../../models/login.model';
 
 @Component({
   standalone: true,
@@ -50,9 +51,7 @@ export class LoginComponent {
         }
         
         // 1. Stockage du token
-        localStorage.setItem('auth_token', response.token); // Utilisez un nom de clé cohérent
-        //this.password = ''; // Nettoyage sécuritaire
-        
+        localStorage.setItem('auth_token', response.token);   
         // 2. Récupération de l'URL de redirection
         const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
         
@@ -79,81 +78,29 @@ export class LoginComponent {
     });
   }
 
-  /*login(): void {
-    if (!this.isValidForm()) return;
-
-    this.isLoading = true;
-    this.errorMessage = '';
-
-    this.loginService.login(this.email, this.password).subscribe({
-      next: (response) => {
-        if (!response?.token) {
-          throw new Error('Réponse invalide de l\'API');
-        }
-        
-        // 1. Stockage du token
-        localStorage.setItem('auth_token', response.token); // Utilisez un nom de clé cohérent
-        this.password = ''; // Nettoyage sécuritaire
-        
-        // 2. Récupération de l'URL de redirection
-        const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
-        
-
-        this.router.navigateByUrl(returnUrl)
-          .then(navSuccess => {
-            if (!navSuccess) {
-              console.error('Échec de la navigation vers', returnUrl);
-              this.router.navigate(['/dashboard']); // Fallback
-            }
-          })
-          .catch(err => {
-            console.error('Erreur de navigation:', err);
-            window.location.href = '/dashboard'; // Fallback ultime
-          });
-      },
-      error: (err) => {
-        this.errorMessage = this.getErrorMessage(err);
-        this.isLoading = false;
-      },
-      complete: () => {
-        this.isLoading = false;
-      }
-    });
-  }*/
-
-  // Méthode pour la création de compte
   signUp() {
     this.isLoading = true;
     this.errorMessage = '';
     this.successMessage = '';
   
-    this.loginService.signUp(this.email, this.password).subscribe(
-      (response: SignInResponse) => {
+    this.loginService.signUp(this.email, this.password).subscribe({
+      next: (response: SignUpResponse) => {
         this.isLoading = false;
-        if (response.isSuccess) {
-          this.successMessage = 'Votre compte a été créé avec succès ! Vous pouvez maintenant vous connecter.';
-          // Par exemple : rediriger après quelques secondes
+        
+        if (response.success) {
+          this.successMessage = response.message || 'Votre compte a été créé avec succès ! Vous pouvez maintenant vous connecter.';
           // this.router.navigate(['/login']);
         } else {
-          // Si isSuccess est false, on peut gérer un message d'erreur, si applicable
           this.errorMessage = response.message || 'Erreur inattendue lors de la création du compte.';
         }
       },
-      (error: any) => {
+      error: (error: Error) => {
         this.isLoading = false;
-  
-        if (error.status === 409) {
-          this.errorMessage = 'Ce compte existe déjà. Essayez de vous connecter.';
-        } else if (error.status === 500) {
-          this.errorMessage = 'Erreur serveur. Veuillez réessayer plus tard.';
-        } else {
-          this.errorMessage = 'Erreur inconnue. Veuillez réessayer.';
-        }
+        this.errorMessage = error.message;
       }
-    );
+    });
   }
   
-
   private isValidForm(): boolean {
     return this.email.includes('@') && this.password.length >= 6;
   }

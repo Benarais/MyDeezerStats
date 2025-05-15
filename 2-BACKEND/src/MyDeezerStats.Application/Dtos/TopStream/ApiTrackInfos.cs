@@ -6,9 +6,9 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
-namespace MyDeezerStats.Application.Dtos
+namespace MyDeezerStats.Application.Dtos.TopStream
 {
-    public class ApiTrackInfos
+    public class ApiTrackInfos : ApiEntity
     {
         public string Track { get; set; } = string.Empty;
         public string Album {  get; set; } = string.Empty;

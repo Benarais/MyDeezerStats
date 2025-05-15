@@ -1,6 +1,7 @@
 ﻿
 using Microsoft.Extensions.Logging;
-using MyDeezerStats.Application.Dtos;
+using MyDeezerStats.Application.Dtos.LastStream;
+using MyDeezerStats.Application.Dtos.TopStream;
 using MyDeezerStats.Application.Interfaces;
 using MyDeezerStats.Domain.Entities.ListeningInfos;
 using MyDeezerStats.Domain.Exceptions;
@@ -11,18 +12,15 @@ namespace MyDeezerStats.Application.MongoDbServices
     public class ListeningService : IListeningService
     {
         private readonly IListeningRepository _repository;
-        private readonly IInformationRepository _informationRepository;
         private readonly IDeezerService _deezerService;
         private readonly ILogger<ListeningService> _logger;
 
         public ListeningService(
             IListeningRepository repository,
-            IInformationRepository informationRepository,
             IDeezerService deezerService,
             ILogger<ListeningService> logger)
         {
             _repository = repository;
-            _informationRepository = informationRepository;
             _deezerService = deezerService;
             _logger = logger;
         }

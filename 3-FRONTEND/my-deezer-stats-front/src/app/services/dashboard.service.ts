@@ -1,15 +1,19 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { catchError, Observable, throwError } from 'rxjs';
-import { Album, Artist, Track, Recent } from '../models/dashboard.models';
+import { catchError, map, Observable, throwError } from 'rxjs';
+import { Album, Artist, Track, Recent, SearchResult } from '../models/dashboard.models';
 
 @Injectable({
   providedIn: 'root'
 })
 export class DashboardService {
+
+   
   
   private readonly apiUrl = 'http://localhost:5000/api';
   last4Weeks: Date = new Date();
+
+  
   constructor(private http: HttpClient) {}
 
   private getAuthHeaders(): HttpHeaders {
@@ -111,4 +115,62 @@ export class DashboardService {
         return { from: new Date('2000-01-01'), to: currentDate };
     }
   }
+
+  search(query: string, types: ('album' | 'artist')[]): Observable<SearchResult[]> {
+    if (!query || query.trim() === '') {
+      return new Observable(observer => {
+        observer.next([]);
+        observer.complete();
+      });
+    }
+  
+    let params = new HttpParams().set('query', query.trim());
+  
+    if (types.length > 0) {
+      params = params.set('types', types.join(','));
+    }
+  
+    return this.http.get<SearchResult[]>(`${this.apiUrl}/search/suggest`, {
+      headers: this.getAuthHeaders(),
+      params
+    }).pipe(
+      map((results: SearchResult[]) =>
+        results.map(result => ({
+          ...result,
+          type: result.type.toLowerCase() as 'album' | 'artist'
+        }))
+      ),
+      catchError(error => {
+        console.error('Erreur lors de la recherche:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+  
+
+/*  search(query: string, types: ('album' | 'artist')[]): Observable<SearchResult[]> {
+    if (!query || query.trim() === '') {
+      return new Observable(observer => {
+        observer.next([]);
+        observer.complete();
+      });
+    }
+  
+    let params = new HttpParams().set('query', query.trim());
+  
+    if (types.length > 0) {
+      params = params.set('types', types.join(','));
+    }
+  
+    return this.http.get<SearchResult[]>(`${this.apiUrl}/search/suggest`, {
+      headers: this.getAuthHeaders(),
+      params
+    }).pipe(
+      catchError(error => {
+        console.error('Erreur lors de la recherche:', error);
+        return throwError(() => error);
+      })
+    );
+  }*/
+
 }

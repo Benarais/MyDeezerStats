@@ -10,8 +10,9 @@ using MyDeezerStats.Domain.Entities;
 using MyDeezerStats.Domain.Repositories;
 using MyDeezerStats.Infrastructure.Mongo.Authentification;
 using MyDeezerStats.Infrastructure.Mongo.Ecoutes;
-using MyDeezerStats.Infrastructure.Mongo.Informations;
+using MyDeezerStats.Infrastructure.Mongo.Search;
 using MyDeezerStats.Infrastructure.Settings;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,7 +28,6 @@ var mongoHost = isInContainer ? "mongodb" : "localhost";
 builder.Configuration["MongoDbSettings:ConnectionString"] =
     builder.Configuration["MongoDbSettings:ConnectionString"]!
           .Replace("localhost", mongoHost);
-//builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 
 // Ajouter les services à l'injection de dépendances
 builder.Logging.ClearProviders();
@@ -38,16 +38,24 @@ builder.Logging.SetMinimumLevel(LogLevel.Information);
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 
 // Ajouter les autres services
-builder.Services.AddScoped<IListeningRepository, ListeningRepository>();
-builder.Services.AddScoped<IInformationRepository, InformationRepository>();
-builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IDeezerService, DeezerService>();
+builder.Services.AddScoped<ISearchService, SearchService>();
 builder.Services.AddScoped<IListeningService, ListeningService>();
 builder.Services.AddScoped<IExcelService, ExcelService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+
+//Repository
+builder.Services.AddScoped<ISearchRepository, SearchRepository>();
+builder.Services.AddScoped<IListeningRepository, ListeningRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+
 builder.Services.AddScoped<PasswordHasher<User>>();
 builder.Services.AddHttpClient();
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 
 System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 

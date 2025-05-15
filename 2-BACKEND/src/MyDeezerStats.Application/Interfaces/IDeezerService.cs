@@ -1,6 +1,4 @@
-﻿using MyDeezerStats.Application.Dtos;
-using MyDeezerStats.Domain.Entities;
-using MyDeezerStats.Domain.Entities.DeezerInfos;
+﻿using MyDeezerStats.Application.Dtos.TopStream;
 using MyDeezerStats.Domain.Entities.ListeningInfos;
 
 namespace MyDeezerStats.Application.Interfaces

@@ -1,9 +1,7 @@
-﻿
-
-namespace MyDeezerStats.Application.Dtos
+﻿namespace MyDeezerStats.Application.Dtos.TopStream
 {
 
-    public class ShortAlbumInfos
+    public class ShortAlbumInfos : ApiEntity
     {
         public string Title { get; set; } = string.Empty;
         public string Artist { get; set; } = string.Empty;
@@ -12,7 +10,7 @@ namespace MyDeezerStats.Application.Dtos
     }
 
 
-    public class FullAlbumInfos
+    public class FullAlbumInfos : ApiEntity
     {
         public string Title { get; set; } = string.Empty;
         public string Artist { get; set; } = string.Empty;

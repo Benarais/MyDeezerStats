@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MongoDB.Bson;
 using MyDeezerStats.Application.Interfaces;
 
 namespace MyDeezerStats.API.Controllers

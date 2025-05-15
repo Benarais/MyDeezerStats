@@ -1,16 +1,9 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { AuthResponse, SignInResponse, SignUpResponse } from '../models/login.model';
 
-export interface AuthResponse {
-  token?: string;
-}
-
-export interface SignInResponse {
-  isSuccess?: boolean;
-  message?: string; // Ajouter un message d'erreur ou de succès
-}
 
 @Injectable({ providedIn: 'root' })
 export class LoginService {
@@ -31,14 +24,23 @@ export class LoginService {
   }
 
   // Inscription
-  signUp(email: string, password: string): Observable<SignInResponse> {
-    return this.http.post<SignInResponse>(`${this.apiUrl}/signup`, { email, password })
-      .pipe(
-        catchError(error => {
-          console.error('Erreur lors de l\'inscription', error);
-          return throwError(() => new Error('Échec de l\'inscription'));
-        })
-      );
+  signUp(email: string, password: string): Observable<SignUpResponse> {
+    return this.http.post<SignUpResponse>(`${this.apiUrl}/signup`, { email, password }).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('Erreur lors de l\'inscription :', error);
+        let errorMessage = 'Échec de l\'inscription';
+  
+        if (error.error?.message) {
+          errorMessage = error.error.message;
+        } else if (error.status === 409) {
+          errorMessage = 'Ce compte existe déjà. Essayez de vous connecter.';
+        } else if (error.status === 500) {
+          errorMessage = 'Erreur serveur. Veuillez réessayer plus tard.';
+        }
+  
+        return throwError(() => new Error(errorMessage));
+      })
+    );
   }
 
   // Déconnexion

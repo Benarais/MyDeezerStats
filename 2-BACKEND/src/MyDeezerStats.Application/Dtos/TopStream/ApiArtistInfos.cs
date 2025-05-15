@@ -5,16 +5,16 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
-namespace MyDeezerStats.Application.Dtos
+namespace MyDeezerStats.Application.Dtos.TopStream
 {
-    public class ShortArtistInfos
+    public class ShortArtistInfos : ApiEntity
     {
         public string Artist { get; set; } = string.Empty;
         public string CoverUrl { get; set; } = string.Empty;
         public int Count { get; set; }
     }
 
-    public class FullArtistInfos
+    public class FullArtistInfos : ApiEntity
     {
         public string Artist { get; set; } = string.Empty;
         public string CoverUrl { get; set; } = string.Empty;

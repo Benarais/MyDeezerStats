@@ -3,9 +3,9 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using System.Net;
-using MyDeezerStats.Application.Dtos;
 using MyDeezerStats.Domain.Entities.ListeningInfos;
 using MyDeezerStats.Domain.Entities.DeezerApi;
+using MyDeezerStats.Application.Dtos.TopStream;
 
 
 namespace MyDeezerStats.Application.DeezerServices

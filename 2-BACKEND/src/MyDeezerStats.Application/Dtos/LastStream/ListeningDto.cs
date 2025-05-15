@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MyDeezerStats.Application.Dtos
+namespace MyDeezerStats.Application.Dtos.LastStream
 {
     public class ListeningDto
     {

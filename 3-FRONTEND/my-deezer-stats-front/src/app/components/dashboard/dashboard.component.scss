@@ -7,105 +7,165 @@
     min-height: 100vh;
     font-family: 'Poppins', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
 
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(255, 255, 255, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        
+        .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
     .tools-container {
         max-width: 1200px;
         margin: 0 auto 2rem auto;
-        display: flex;
-        justify-content: flex-end;
+        display: grid;
+        grid-template-areas: 
+            "deconnecteur selecteur recherche import";
+        grid-template-columns: auto auto 1fr auto;
+        align-items: center;
         gap: 1rem;
-        flex-wrap: wrap;
-
-        @media (max-width: 768px) {
-            justify-content: center;
-            gap: 0.8rem;
-            margin-bottom: 1.5rem;
+        padding: 0 1rem;
+    
+        @media (max-width: 900px) {
+            grid-template-areas: 
+                "deconnecteur deconnecteur"
+                "selecteur import"
+                "recherche recherche";
+            grid-template-columns: 1fr auto;
         }
-
+    
+        @media (max-width: 500px) {
+            grid-template-areas: 
+                "deconnecteur"
+                "selecteur" 
+                "recherche"
+                "import";
+            grid-template-columns: 1fr;
+        }
+    
+        /* Déconnexion */
+        .se-deconnecter {
+            grid-area: deconnecteur;
+            margin-right: auto;
+    
+            .back-button {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
+                padding: 0.8rem 1.5rem;
+                background-color: #e74c3c;
+                color: white;
+                border: none;
+                border-radius: 12px;
+                font-family: 'Poppins', sans-serif;
+                font-size: 1rem;
+                font-weight: 500;
+                cursor: pointer;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+                transition: all 0.3s ease;
+                
+                &:hover {
+                    background-color: #c0392b;
+                    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+                }
+            }
+        }
+    
+        /* Sélecteur de période */
         .period-selector-container {
-            margin: 0;
-
+            grid-area: selecteur;
+            min-width: 200px;
+    
             .period-selector {
-                appearance: none;
-                -webkit-appearance: none;
-                -moz-appearance: none;
-                padding: 0.8rem 3rem 0.8rem 1.5rem;
+                width: 100%;
+                padding: 0.8rem 1.5rem 0.8rem 1rem;
                 border: none;
                 border-radius: 12px;
                 background-color: #fff;
                 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
                 font-family: 'Poppins', sans-serif;
                 font-size: 1rem;
-                font-weight: 500;
-                color: #2c3e50;
                 cursor: pointer;
-                background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232c3e50' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+                appearance: none;
+                background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
                 background-repeat: no-repeat;
-                background-position: right 1rem center;
-                background-size: 1.2rem;
-                transition: all 0.3s ease;
-                
-                &:hover {
-                    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-                }
+                background-position: right 0.7rem center;
+                background-size: 1rem;
+            }
+        }
+    
+        /* Recherche */
+        .search-container {
+            grid-area: recherche;
+            position: relative;
+            min-width: 0; /* Empêche le débordement */
+    
+            input {
+                width: 100%;
+                max-width: 400px;
+                padding: 0.8rem 1.5rem;
+                border: none;
+                border-radius: 12px;
+                background-color: #fff;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+                font-family: 'Poppins', sans-serif;
+                font-size: 1rem;
                 
                 &:focus {
                     outline: none;
                     box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.3);
                 }
             }
-        }
-
-        .search-container {
-            display: flex;
-            align-items: center;
-            background-color: #fff;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            overflow: hidden;
-            transition: all 0.3s ease;
-
-            &:hover {
+    
+            .search-results {
+                position: absolute;
+                width: 100%;
+                max-height: 300px;
+                overflow-y: auto;
+                margin-top: 0.5rem;
+                background: white;
+                border-radius: 12px;
                 box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-            }
-
-            .search-input {
-                padding: 0.8rem 1.5rem;
-                border: none;
-                font-family: 'Poppins', sans-serif;
-                font-size: 1rem;
-                color: #2c3e50;
-                min-width: 200px;
-
-                &:focus {
-                    outline: none;
-                }
-
-                @media (max-width: 768px) {
-                    min-width: 150px;
-                    padding: 0.7rem 1.2rem;
-                }
-            }
-
-            .search-button {
-                padding: 0 1.2rem;
-                height: 100%;
-                border: none;
-                background-color: #3498db;
-                color: white;
-                cursor: pointer;
-                transition: background-color 0.3s ease;
-
-                &:hover {
-                    background-color: darken(#3498db, 10%);
-                }
-
-                i {
-                    font-size: 1rem;
+                z-index: 100;
+                list-style: none;
+                padding: 0;
+    
+                li {
+                    padding: 0.8rem 1.5rem;
+                    cursor: pointer;
+                    transition: background 0.2s;
+    
+                    &:hover {
+                        background: #f8f9fa;
+                    }
                 }
             }
         }
-
+    
+        /* Import Excel */
         .import-container {
+            grid-area: import;
+            position: relative;
+    
             .import-button {
                 display: inline-flex;
                 align-items: center;
@@ -121,20 +181,14 @@
                 cursor: pointer;
                 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
                 transition: all 0.3s ease;
-
+                
                 &:hover {
-                    background-color: darken(#2ecc71, 10%);
-                    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+                    background-color: #27ae60;
                 }
-
-                i {
-                    font-size: 1rem;
-                }
-
-                @media (max-width: 768px) {
-                    padding: 0.7rem 1.2rem;
-                    font-size: 0.95rem;
-                }
+            }
+    
+            #file-upload {
+                display: none;
             }
         }
     }
@@ -331,7 +385,19 @@
         padding: 1rem;
 
         .tools-container {
+            .se-deconnecter {
+                order: -1;
+                width: 100%;
+                
+                .back-button {
+                    width: 100%;
+                    justify-content: center;
+                }
+            }
+
             .period-selector-container {
+                width: 100%;
+                
                 .period-selector {
                     width: 100%;
                     max-width: 280px;
@@ -343,16 +409,11 @@
             .search-container {
                 width: 100%;
                 max-width: 280px;
-
-                .search-input {
-                    flex-grow: 1;
-                }
             }
 
             .import-container {
                 width: 100%;
-                max-width: 280px;
-
+                
                 .import-button {
                     width: 100%;
                     justify-content: center;

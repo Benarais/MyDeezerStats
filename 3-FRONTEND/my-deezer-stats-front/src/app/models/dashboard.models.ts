@@ -11,7 +11,6 @@ export interface Artist {
   artist: string;
   count: number;
   coverUrl: string;
-  //totalListening: number;
 }
 
 export interface Track{
@@ -33,3 +32,9 @@ export interface Recent {
   imageUrl?: string;
 }
 
+export interface SearchResult {
+  type: 'album' | 'artist';
+  title?: string;    // pour album
+  artist: string;    // artiste pour album et artist
+
+}

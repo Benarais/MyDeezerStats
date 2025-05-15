@@ -77,3 +77,23 @@ sec-ch-ua-platform: "Windows"
 
 
 /api/listening/top-albums?from=2025-01-01T00:00:00.000Z&to=2025-12-31T00:00:00.000Z
+
+http://localhost:5000/api/listening/album?identifier=Hurry%20Up%20Tomorrow%7CThe%20Weeknd
+
+curl -X GET "http://localhost:5035/api/listening/album?identifier=High%20%26%20Fines%20Herbes%20-%20La%20Saison%205%7CCaballero%20%26%20JeanJass"
+
+http://localhost:5000/api/listening/album?identifier=High%20%26%20Fines%20Herbes%20-%20La%20Saison%205%7CCaballero%20%26%20JeanJass
+
+db.listening.find({ Album: "High & Fines Herbes - La Saison 5" })
+
+var artist = "Caballero & JeanJass";
+
+db.listening.aggregate([ /* Étape 1 : Filtrer les écoutes de l'album/artiste spécifique*/ { $match: { $and: [ { "Album": { $regex: "^" + title + "$", $options: "i" } }, { "Artist": { $regex: ".*" + artist + ".*", $options: "i" } }, { "Track": { $exists: true, $ne: "" } }] } }, /* Étape 2 : Normaliser les noms de pistes en supprimant les featurings*/ { $addFields: { NormalizedTrack: { $trim: { input: { $replaceAll: { input: { $toLower: "$Track" }, find: "\\s*(feat\\.|ft\\..*|feat.*|ft.*|,).*", /* Supprimer les featurings*/ replacement: "" } } } } } }, /* Étape 3 : Grouper par piste normalisée*/ { $group: { _id: "$NormalizedTrack", Count: { $sum: 1 }, Album: { $first: "$Album" }, Artist: { $first: "$Artist" } } }, /* Étape 4 : Regrouper toutes les pistes dans un array*/ { $group: { _id: { Album: "$Album", Artist: "$Artist" }, Tracks: { $push: { Track: "$_id", Count: "$Count" } }, TotalCount: { $sum: "$Count" } } }, /* Étape 5 : Projeter le résultat final*/ { $project: { Title: "$_id.Album", Artist: "$_id.Artist", StreamCount: "$TotalCount", StreamCountByTrack: "$Tracks", _id: 0 } }] );
+
+
+
+
+curl -v -X POST "http://localhost:5035/api/auth/login" -H "Content-Type: application/json" -d "{\"email\": \"sofiane@sofiane.fr\", \"password\": \"sofiane\"}"
+
+
+curl -i "http://localhost:5035/api/search?query=test"

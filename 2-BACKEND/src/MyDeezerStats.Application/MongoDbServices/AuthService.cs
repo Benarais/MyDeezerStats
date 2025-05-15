@@ -68,7 +68,8 @@ namespace MyDeezerStats.Application.MongoDbServices
 
         private bool VerifyPassword(User user, string password)
         {
-            return password == user.PasswordHash;
+            var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password);
+            return verificationResult == PasswordVerificationResult.Success;
         }
 
         private string GenerateJwtToken(User user)

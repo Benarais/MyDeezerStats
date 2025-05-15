@@ -1,4 +1,5 @@
-﻿using MyDeezerStats.Application.Dtos;
+﻿using MyDeezerStats.Application.Dtos.LastStream;
+using MyDeezerStats.Application.Dtos.TopStream;
 
 namespace MyDeezerStats.Application.Interfaces
 {
