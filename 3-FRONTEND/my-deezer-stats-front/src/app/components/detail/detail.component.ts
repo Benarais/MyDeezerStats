@@ -76,7 +76,9 @@ export class DetailComponent implements OnInit {
     setTimeout(() => this.router.navigate(['/dashboard']), 3000);
   }
 
-  
+  goToDashboard() {
+  this.router.navigate(['/dashboard']); // ou le chemin vers votre dashboard
+}
 
   goBack(): void {
     this.location.back();

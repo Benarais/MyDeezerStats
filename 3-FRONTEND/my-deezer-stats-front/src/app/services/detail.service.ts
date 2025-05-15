@@ -28,7 +28,6 @@ export class DetailService {
 
   getDetails(type: 'album' | 'artist', identifier: string): Observable<DetailItem> {
   let endpoint = '';
-
   switch (type) {
     case 'album':
       endpoint = `/listening/album`;

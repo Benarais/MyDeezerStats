@@ -1,4 +1,9 @@
 <div class="detail-container" *ngIf="item">
+    <!-- Bouton retour -->
+    <button class="back-button" (click)="goToDashboard()">
+      <i class="fas fa-arrow-left"></i> Retour au dashboard
+    </button>
+    
     <!-- Header section -->
     <div class="detail-header">
       <img [src]="item.coverUrl || 'assets/default-cover.png'" 
@@ -21,8 +26,11 @@
             <span *ngIf="item.totalDuration">
               <i class="fas fa-clock"></i> {{item.totalDuration | duration}}
             </span>
+            <span><i class="fas fa-hourglass"></i> Temps total d'écoute : {{item.totalListening | duration}}</span>
           </div>
-        </div>
+          </div>
+          <!-- Album additional info moved here -->
+         
         
         <!-- Artist specific info -->
         <div *ngIf="item.type === 'artist'" class="artist-info">
@@ -33,6 +41,10 @@
             <span *ngIf="item.nbFans">
               <i class="fas fa-users"></i> {{item.nbFans | number}} fans
             </span>
+          </div>
+          <!-- Artist additional info moved here -->
+          <div class="additional-artist-stats">
+            <span><i class="fas fa-hourglass"></i> Temps total d'écoute : {{item.totalListening | duration}}</span>
           </div>
         </div>
       </div>
@@ -65,24 +77,5 @@
             </div>
           </div>
         </div>
-      </div>
-      
-  
-    <!-- Additional info section -->
-    <div class="additional-info">
-      <div *ngIf="item.type === 'album'" class="album-additional">
-        <h3>À propos de cet album</h3>
-        <p>Durée totale : {{item.totalDuration | duration}}</p>
-        <p>Temps total d'écoute : {{item.totalListening | duration}}</p>
-      </div>
-      
-      <div *ngIf="item.type === 'artist'" class="artist-additional">
-        <h3>À propos de l'artiste</h3>
-        <p>Temps total d'écoute : {{item.totalListening | duration}}</p>
-      </div>
     </div>
-  </div>
-  
-  <div *ngIf="!item" class="loading-message">
-    <i class="fas fa-spinner fa-spin"></i> Chargement en cours...
-  </div>
+</div>
