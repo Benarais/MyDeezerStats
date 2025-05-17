@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./3-FRONTEND/my-deezer-stats-front
+      dockerfile: Dockerfile.prod  # Dockerfile optimisé pour la prod
+    environment:
+      - NODE_ENV=production
+      - API_URL=https://deezer-api.up.railway.app
+    deploy:
+      resources:
+        limits:
+          memory: 512MB
+
+  api:
+    build:
+      context: ./2-BACKEND/src
+      dockerfile: Dockerfile.prod   # Dockerfile avec runtime .NET uniquement
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - MongoDbSettings__ConnectionString=${MONGO_URI}  # Variable Railway
+    deploy:
+      resources:
+        limits:
+          memory: 512MB
+
+  # Optionnel : Si vous utilisez MongoDB conteneurisé sur Railway
+  mongodb:
+    image: mongo:7.0
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin
+    volumes:
+      - deezer_mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+
+volumes:
+  deezer_mongo_data:
