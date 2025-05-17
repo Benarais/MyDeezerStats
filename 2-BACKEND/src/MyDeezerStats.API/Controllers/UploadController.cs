@@ -28,7 +28,7 @@ namespace MyDeezerStats.API.Controllers
             {
                 // Traitement du fichier
                 using var stream = file.OpenReadStream();
-                await _excelService.ProcessExcelFileAsync(stream);
+                await _excelService.ProcessExcelFileAsync(stream,1000);
                 return Ok("Données importées avec succès.");
             }
             catch (Exception ex)

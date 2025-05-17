@@ -1,4 +1,21 @@
+version: '3.8'
+
 services:
+  frontend:
+    build:
+      context: ./3-FRONTEND/my-deezer-stats-front
+      dockerfile: Dockerfile
+    container_name: deezer-frontend
+    ports:
+      - "80:80"
+    networks:
+      - mydeezer-network
+    # Ajout de configurations pour éviter les problèmes de fichiers
+    tmpfs:
+      - /app/node_modules
+    environment:
+      - NODE_ENV=production
+      - CHOKIDAR_USEPOLLING=true
 
   api:
     build:
@@ -16,7 +33,7 @@ services:
       mongodb:
         condition: service_healthy
     volumes:
-      - ./1-DATA:/app/data  # Monter ton dossier local contenant le fichier Excel dans le conteneur
+      - ./1-DATA:/app/data
     networks:
       - mydeezer-network
 
@@ -26,8 +43,8 @@ services:
     ports:
       - "27017:27017"
     volumes:
-      - ./1-DATA/mongo-init.js:/docker-entrypoint-initdb.d/init.js:ro
       - deezer_mongo_data:/data/db
+      - ./1-DATA/mongo-init.js:/docker-entrypoint-initdb.d/init.js:ro
     environment:
       - MONGO_INITDB_ROOT_USERNAME=admin
       - MONGO_INITDB_ROOT_PASSWORD=admin
@@ -41,6 +58,7 @@ services:
 
 volumes:
   deezer_mongo_data:
+    driver: local
 
 networks:
   mydeezer-network:

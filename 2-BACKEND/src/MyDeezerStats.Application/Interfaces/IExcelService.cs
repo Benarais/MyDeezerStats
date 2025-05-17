@@ -8,6 +8,6 @@ namespace MyDeezerStats.Application.Interfaces
 {
     public interface IExcelService
     {
-        Task ProcessExcelFileAsync(Stream filePath);
+        Task ProcessExcelFileAsync(Stream filePath, int batchSize);
     }
 }

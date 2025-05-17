@@ -1,30 +1,26 @@
-### Stage 1: Build the Angular app
-FROM node:18 AS build
+# Étape 1 : Construction de l'application Angular
+FROM node:18-alpine AS build
 
-WORKDIR /app/MyDeezerStats/3-FRONTEND/my-deezer-stats-front
+WORKDIR /app
 
-# Copy package.json and package-lock.json
+# Copie des fichiers de dépendances
 COPY package.json package-lock.json ./
 
-# Install dependencies (including @types/jasmine)
-RUN npm install
+# Installation des dépendances (mode production)
+RUN npm ci
 
-# Copy the rest of the application
+# Copie du reste de l'application
 COPY . .
 
-# Build the Angular app
+# Construction de l'application en mode production
 RUN npm run build --prod
 
+# Étape 2 : Serveur Nginx pour l'application
+FROM nginx:1.25-alpine
 
-### Stage 2: Serve the Angular app with Nginx
-FROM nginx:alpine AS serve
-
-# Copy the build output to Nginx html folder
-COPY --from=build /app/MyDeezerStats/3-FRONTEND/my-deezer-stats-front/dist /usr/share/nginx/html
-
-# Copy the default Nginx configuration
-COPY nginx.conf /etc/nginx/nginx.conf
-
+# Copie des fichiers construits depuis l'étape de build
+COPY --from=build /app/dist/my-deezer-stats-front /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]
