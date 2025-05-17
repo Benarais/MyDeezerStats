@@ -82,41 +82,5 @@ export class DetailComponent implements OnInit {
 
   goBack(): void {
     this.location.back();
-  }
-
-  // // Type guards améliorés
-  // isAlbum(item: DetailItem): item is AlbumItem {
-  //   return item?.type === 'album';
-  // }
-
-  // isArtist(item: DetailItem): item is ArtistItem {
-  //   return item?.type === 'artist';
-  // }
-
-  // // Méthodes helpers pour le template
-  // getCoverUrl(): string {
-  //   return this.item?.coverUrl || 'assets/default-cover.jpg';
-  // }
-
-  // getMainTitle(): string {
-  //   if (!this.item) return '';
-    
-  //   if (this.isAlbum(this.item)) {
-  //     return this.item.title || this.item.artist || '';
-  //   } else if (this.isArtist(this.item)) {
-  //     return this.item.artist;
-  //   } 
-  //   return '';
-  // }
-
-  // showArtistSubtitle(): boolean {
-  //   if (!this.item) return false;
-    
-  //   if (this.isAlbum(this.item)) {
-  //     return !!this.item.artist && !!this.item.title;
-  //   } 
-  //   return false;
-  // }
-
- 
+  } 
 }

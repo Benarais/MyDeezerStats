@@ -26,7 +26,13 @@ namespace MyDeezerStats.Application.MongoDbServices
             var artists = artistTask.Result;
 
             var albumSuggestions = albums
-                .Select(album => new SearchSuggestion { Title = album.Key, Artist = album.Value, Type = EntityType.Album })
+                .SelectMany(album => album.Value.Select(artist =>
+                    new SearchSuggestion
+                    {
+                        Title = album.Key,
+                        Artist = artist,
+                        Type = EntityType.Album
+                    }))
                 .ToList();
 
             var artistSuggestions = artists

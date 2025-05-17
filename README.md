@@ -1,13 +1,12 @@
 # MyDeezerStats
 Solution pour consulter l'historique détaillée des écoutes Deezer
 
-A la racine du projet, lancez les conteneurs:
+Ouvrez un terminal à la racine du projet
+Tappez successivement les commandes suivantes:
 
+cd 3-FRONTEND\my-deezer-stats-front
 docker build
 docker compose up -d
-
-Dans le projet front lancez Angular:
-
 npm install
 ng serve
 

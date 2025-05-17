@@ -205,36 +205,36 @@ namespace MyDeezerStats.Infrastructure.Mongo.Ecoutes
                 { "Artist", new BsonDocument("$first", "$MainArtist") }
             }),
 
-        // Étape 4: Regrouper toutes les pistes
-        new BsonDocument("$group",
-            new BsonDocument
-            {
-                { "_id", new BsonDocument
-                    {
-                        { "Album", "$Album" },
-                        { "Artist", "$Artist" }
-                    }
-                },
-                { "Tracks", new BsonDocument("$push",
-                    new BsonDocument
-                    {
-                        { "Track", "$_id" },
-                        { "Count", "$Count" }
-                    })},
-                { "TotalCount", new BsonDocument("$sum", "$Count") }
-            }),
+            // Étape 4: Regrouper toutes les pistes
+            new BsonDocument("$group",
+                new BsonDocument
+                {
+                    { "_id", new BsonDocument
+                        {
+                            { "Album", "$Album" },
+                            { "Artist", "$Artist" }
+                        }
+                    },
+                    { "Tracks", new BsonDocument("$push",
+                        new BsonDocument
+                        {
+                            { "Track", "$_id" },
+                            { "Count", "$Count" }
+                        })},
+                    { "TotalCount", new BsonDocument("$sum", "$Count") }
+                }),
 
-        // Étape 5: Projeter le résultat final
-        new BsonDocument("$project",
-            new BsonDocument
-            {
-                { "Title", "$_id.Album" },
-                { "Artist", "$_id.Artist" },
-                { "StreamCount", "$TotalCount" },
-                { "StreamCountByTrack", "$Tracks" },
-                { "_id", 0 }
-            })
-    };
+             // Étape 5: Projeter le résultat final
+            new BsonDocument("$project",
+                new BsonDocument
+                {
+                    { "Title", "$_id.Album" },
+                    { "Artist", "$_id.Artist" },
+                    { "StreamCount", "$TotalCount" },
+                    { "StreamCountByTrack", "$Tracks" },
+                    { "_id", 0 }
+                })
+            };
 
             var result = await collection.Aggregate<BsonDocument>(pipeline).FirstOrDefaultAsync();
 
@@ -344,7 +344,102 @@ namespace MyDeezerStats.Infrastructure.Mongo.Ecoutes
             }).ToList();
         }
 
+
         public async Task<ArtistListening?> GetArtistWithAsync(string artist, DateTime? from = null, DateTime? to = null)
+        {
+            if (string.IsNullOrWhiteSpace(artist))
+                throw new ArgumentException("Artist parameter is required");
+
+            var collection = _database.GetCollection<BsonDocument>("listening");
+
+            // Construction du filtre pour inclure les featurings
+            var filter = Builders<BsonDocument>.Filter.And(
+                BuildDateFilter(from, to),
+                Builders<BsonDocument>.Filter.Regex("Artist", new BsonRegularExpression($"(^|[,&]\\s*){Regex.Escape(artist)}([,&]|$)", "i")),
+                Builders<BsonDocument>.Filter.Exists("Track"),
+                Builders<BsonDocument>.Filter.Ne("Track", "")
+            );
+
+            var pipeline = new[]
+            {
+        // Étape 1: Filtrer les écoutes de l'artiste ou en featuring
+        PipelineStageDefinitionBuilder.Match(filter),
+
+        // Étape 2: Extraire tous les artistes (en incluant les featurings)
+        new BsonDocument("$addFields",
+            new BsonDocument
+            {
+                { "Artists", new BsonDocument("$split", new BsonArray { "$Artist", "," }) }
+            }
+        ),
+
+        // Étape 3: Vérifier si l'artiste est présent parmi les artistes
+        new BsonDocument("$addFields",
+            new BsonDocument("IsMainOrFeaturing",
+                new BsonDocument("$in", new BsonArray { artist, "$Artists" })
+            )
+        ),
+
+        // Étape 4: Filtrer les pistes où l'artiste est présent
+        new BsonDocument("$match",
+            new BsonDocument("IsMainOrFeaturing", true)
+        ),
+
+        // Étape 5: Grouper par piste
+        new BsonDocument("$group",
+            new BsonDocument
+            {
+                { "_id", "$Track" },
+                { "Count", new BsonDocument("$sum", 1) }
+            }
+        ),
+
+        // Étape 6: Regrouper toutes les pistes dans un array
+        new BsonDocument("$group",
+            new BsonDocument
+            {
+                { "_id", artist },
+                { "Tracks", new BsonDocument("$push",
+                    new BsonDocument
+                    {
+                        { "Track", "$_id" },
+                        { "Count", "$Count" }
+                    })
+                },
+                { "TotalCount", new BsonDocument("$sum", "$Count") }
+            }
+        ),
+
+        // Étape 7: Projeter le résultat final
+        new BsonDocument("$project",
+            new BsonDocument
+            {
+                { "Name", "$_id" },
+                { "StreamCount", "$TotalCount" },
+                { "StreamCountByTrack", "$Tracks" },
+                { "_id", 0 }
+            }
+            )
+        };
+
+            var result = await collection.Aggregate<BsonDocument>(pipeline).FirstOrDefaultAsync();
+
+            if (result == null)
+                return null;
+
+            return new ArtistListening
+            {
+                Name = result["Name"].AsString,
+                StreamCount = result["StreamCount"].AsInt32,
+                StreamCountByTrack = result["StreamCountByTrack"].AsBsonArray
+                    .Select(t => new KeyValuePair<string, int>(
+                        t["Track"].AsString,
+                        t["Count"].AsInt32))
+                    .ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
+            };
+        }
+
+     /*   public async Task<ArtistListening?> GetArtistWithAsync(string artist, DateTime? from = null, DateTime? to = null)
         {
             if (string.IsNullOrWhiteSpace(artist))
                 throw new ArgumentException("Artist parameter is required");
@@ -435,7 +530,7 @@ namespace MyDeezerStats.Infrastructure.Mongo.Ecoutes
                         t["Count"].AsInt32))
                     .ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
             };
-        }
+        }*/
 
         public async Task<List<TrackListening>> GetTopTrackWithAsync(DateTime? from = null, DateTime? to = null, int limit = 10)
         {

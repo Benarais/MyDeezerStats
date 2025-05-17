@@ -156,6 +156,50 @@ namespace MyDeezerStats.Application.DeezerServices
 
             try
             {
+                // 1. Recherche de l'artiste sur Deezer
+                var deezerArtist = await SearchArtistOnDeezer(artist.Name);
+
+                if (deezerArtist == null)
+                {
+                    _logger.LogInformation("Artist not found on Deezer: {ArtistName}", artist.Name);
+                    return CreateBasicFullArtist(artist);
+                }
+
+                // 2. Récupération des détails complets
+                var artistDetails = await GetFullArtistDetails(deezerArtist.Id);
+
+                if (artistDetails == null)
+                {
+                    _logger.LogWarning("Artist details not found for Deezer ID: {ArtistId}", deezerArtist.Id);
+                    return CreateBasicFullArtistWithPartialDeezerData(artist, deezerArtist);
+                }
+
+                // 3. Construction du résultat final
+                return MapToFullArtistInfosAsync(artist, artistDetails).Result;
+            }
+            catch (HttpRequestException httpEx)
+            {
+                _logger.LogError(httpEx, "HTTP error while calling Deezer API for artist {ArtistName}", artist.Name);
+                return CreateBasicFullArtist(artist);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error enriching artist {ArtistName}", artist.Name);
+                return CreateBasicFullArtist(artist);
+            }
+        }
+     
+
+   /*     public async Task<FullArtistInfos> EnrichFullArtistWithDeezerData(ArtistListening artist)
+        {
+            if (artist == null)
+            {
+                _logger.LogWarning("Artist cannot be null");
+                throw new ArgumentNullException(nameof(artist));
+            }
+
+            try
+            {
                 // Recherche de l'artiste
                 var deezerArtist = await SearchArtistOnDeezer(artist.Name);
                 if (deezerArtist == null)
@@ -179,7 +223,7 @@ namespace MyDeezerStats.Application.DeezerServices
                 _logger.LogError(ex, "Error enriching artist {Name}", artist.Name);
                 return CreateBasicFullArtist(artist);
             }
-        }
+        }*/
 
 
         private FullAlbumInfos CreateBasicFullAlbum(AlbumListening album)
@@ -256,6 +300,46 @@ namespace MyDeezerStats.Application.DeezerServices
                 ReleaseDate = fullDetails.ReleaseDate ?? string.Empty,
                 TrackInfos = trackInfos,
                 CoverUrl = deezerAlbum.CoverXl ?? deezerAlbum.CoverBig ?? string.Empty
+            };
+        }
+
+        private async Task<FullArtistInfos> MapToFullArtistInfosAsync(ArtistListening artist, DeezerArtistDetails artistDetails)
+        {
+            ArgumentNullException.ThrowIfNull(artist);
+            ArgumentNullException.ThrowIfNull(artistDetails);
+
+            var trackTasks = artist.StreamCountByTrack
+                .OrderByDescending(kvp => kvp.Value) 
+                .Select( kvp => ProcessTrackAsync(kvp.Key, kvp.Value, artistDetails.Name ?? artist.Name)).ToList();
+
+            var trackInfos = await Task.WhenAll(trackTasks);
+
+            return new FullArtistInfos
+            {
+                Artist = artistDetails.Name ?? artist.Name,
+                PlayCount = artist.StreamCount,
+                TotalListening = trackInfos.Sum(t => t.TotalListening),
+                NbFans = artistDetails.NbFan,
+                TrackInfos = trackInfos.ToList(),
+                CoverUrl = artistDetails.PictureBig ?? artistDetails.Picture ?? string.Empty
+            };
+        }
+
+        private async Task<ApiTrackInfos> ProcessTrackAsync(string trackName, int playCount, string artistName)
+        {
+            var trackDetail = await GetTrackFromDeezer(trackName, artistName);
+            int trackDuration = trackDetail?.Duration ?? 0;
+            int trackListeningTime = playCount * trackDuration;
+
+            return new ApiTrackInfos
+            {
+                Track = trackName,
+                Artist = artistName,
+                Count = playCount,
+                TrackUrl = trackDetail?.CoverUrl ?? string.Empty,
+                Duration = trackDuration,
+                TotalListening = trackListeningTime,
+                Album = trackDetail?.Album?.Title ?? string.Empty
             };
         }
 

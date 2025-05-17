@@ -191,40 +191,6 @@ export class DashboardComponent implements OnInit {
       this.showSearchResults = false;
     }
   }
-  
-
-  // onSearchInput(): void {
-  //   if (this.searchQuery.length > 1) {
-  //     this.searchTerms.next(this.searchQuery);
-  //   } else {
-  //     this.filteredResults = [];
-  //     this.showSearchResults = false;
-  //   }
-  // }
-
-  // onSelectResult(item: SearchResult): void {
-  //   this.showSearchResults = false;
-  //   this.searchQuery = '';
-  //   this.navigateToDetail(item.type, item);
-  // }
-
-  // hideSearchResults(): void {
-  //   this.showSearchResults = false;
-  // }
-
-  // formatResult(item: SearchResult): string {
-  //   if (item.type === 'album' ) {
-  //     return `${item.title || ''} - ${item.artist || ''}`;
-  //   } else if (item.type === 'artist') {
-  //     return item.artist || '';
-  //   }
-  //   return '';
-  // }
-
-  // performSearch(): void {
-  //   this.searchTerms.next(this.searchQuery);
-  //   this.showSearchResults = true;
-  // }
 
   navigateToDetail(type: 'album' | 'artist', item: any): void {
     let identifier = '';

@@ -42,6 +42,29 @@ namespace MyDeezerStats.Application.MongoDbServices
 
         public async Task<FullAlbumInfos> GetAlbumAsync(string fullId)
         {
+            if (string.IsNullOrWhiteSpace(fullId))
+            {
+                throw new ArgumentException("Album identifier cannot be empty", nameof(fullId));
+            }
+
+            var pipeIndex = fullId.IndexOf('|');
+            if (pipeIndex < 0 || pipeIndex == fullId.Length - 1)
+            {
+                throw new ArgumentException("Invalid album identifier format", nameof(fullId));
+            }
+
+            var title = Uri.UnescapeDataString(fullId.Substring(0, pipeIndex));
+            var artist = Uri.UnescapeDataString(fullId.Substring(pipeIndex + 1));
+            var album = await _repository.GetAlbumsWithAsync(title, artist, null, null)
+                ?? throw new NotFoundException($"Album {title} by {artist} not found");
+
+            var enrichedAlbum = await _deezerService.EnrichFullAlbumWithDeezerData(album);
+
+            return enrichedAlbum;
+        }
+
+      /*  public async Task<FullAlbumInfos> GetAlbumAsync(string fullId)
+        {
             if (string.IsNullOrWhiteSpace(fullId) || !fullId.Contains('|'))
             {
                 throw new ArgumentException("Invalid album identifier format", nameof(fullId));
@@ -61,7 +84,7 @@ namespace MyDeezerStats.Application.MongoDbServices
             FullAlbumInfos enrichedAlbum = await _deezerService.EnrichFullAlbumWithDeezerData(album);
 
             return enrichedAlbum;
-        }
+        }*/
 
         public async Task<List<ShortArtistInfos>> GetTopArtistsAsync(DateTime? from, DateTime? to)
         {
