@@ -1,13 +1,9 @@
-databases:  # <-- "databases" au lieu de "type: database"
+databases:
   - name: mydeezermongo
     databaseName: MyDeezerStats
     plan: free
-    engine: mongo
-    envVars:
-      - key: MONGO_INITDB_ROOT_USERNAME
-        value: admin
-      - key: MONGO_INITDB_ROOT_PASSWORD
-        generateValue: true
+    # 'engine' et 'envVars' ne sont plus nécessaires pour MongoDB sur Render
+    # Render gère automatiquement ces paramètres
 
 services:
   - type: web
