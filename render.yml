@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: frontend
+    dockerContext: ./3-FRONTEND/my-deezer-stats-front
+    dockerfile: Dockerfile.prod
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_URL
+        value: https://${SERVICE_NAME_API}.onrender.com  # Render génère automatiquement l'URL
+    healthCheckPath: /
+    plan: free  # Option free tier
+
+  - type: web
+    name: api
+    dockerContext: ./2-BACKEND/src
+    dockerfile: Dockerfile.prod
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: MongoDbSettings__ConnectionString
+        fromDatabase:
+          name: mydeezermongo
+          property: connectionString
+    plan: free
+
+  - type: database
+    name: mydeezermongo
+    databaseName: MyDeezerStats
+    plan: free
+    engine: mongo  # Render gère automatiquement la création
+    envVars:
+      - key: MONGO_INITDB_ROOT_USERNAME
+        value: admin
+      - key: MONGO_INITDB_ROOT_PASSWORD
+        generateValue: true  # Render génère un mot de passe sécurisé
