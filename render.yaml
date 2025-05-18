@@ -1,3 +1,14 @@
+databases:  # <-- "databases" au lieu de "type: database"
+  - name: mydeezermongo
+    databaseName: MyDeezerStats
+    plan: free
+    engine: mongo
+    envVars:
+      - key: MONGO_INITDB_ROOT_USERNAME
+        value: admin
+      - key: MONGO_INITDB_ROOT_PASSWORD
+        generateValue: true
+
 services:
   - type: web
     name: frontend
@@ -7,9 +18,9 @@ services:
       - key: NODE_ENV
         value: production
       - key: API_URL
-        value: https://${SERVICE_NAME_API}.onrender.com  # Render génère automatiquement l'URL
+        value: https://${SERVICE_NAME_API}.onrender.com
     healthCheckPath: /
-    plan: free  # Option free tier
+    plan: free
 
   - type: web
     name: api
@@ -23,14 +34,3 @@ services:
           name: mydeezermongo
           property: connectionString
     plan: free
-
-  - type: database
-    name: mydeezermongo
-    databaseName: MyDeezerStats
-    plan: free
-    engine: mongo  # Render gère automatiquement la création
-    envVars:
-      - key: MONGO_INITDB_ROOT_USERNAME
-        value: admin
-      - key: MONGO_INITDB_ROOT_PASSWORD
-        generateValue: true  # Render génère un mot de passe sécurisé
