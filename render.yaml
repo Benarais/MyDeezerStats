@@ -9,7 +9,7 @@ services:
   - type: web
     name: frontend
     dockerContext: ./3-FRONTEND/my-deezer-stats-front
-    dockerfile: Dockerfile.prod
+    dockerfile: Dockerfile
     envVars:
       - key: NODE_ENV
         value: production
@@ -21,7 +21,7 @@ services:
   - type: web
     name: api
     dockerContext: ./2-BACKEND/src
-    dockerfile: Dockerfile.prod
+    dockerfile: Dockerfile
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
