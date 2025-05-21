@@ -3,8 +3,10 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
 using MongoDB.Driver;
 using MyDeezerStats.Application.DeezerServices;
+using MyDeezerStats.Application.Dtos.LastStream;
 using MyDeezerStats.Application.ExcelServices;
 using MyDeezerStats.Application.Interfaces;
+using MyDeezerStats.Application.LastFmServices;
 using MyDeezerStats.Application.MongoDbServices;
 using MyDeezerStats.Domain.Entities;
 using MyDeezerStats.Domain.Repositories;
@@ -36,9 +38,11 @@ builder.Logging.SetMinimumLevel(LogLevel.Information);
 
 // Ajouter la configuration JwtSettings
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
-
+builder.Services.Configure<LastFmOptions>(
+    builder.Configuration.GetSection("LastFm"));
 // Ajouter les autres services
 builder.Services.AddScoped<IDeezerService, DeezerService>();
+builder.Services.AddHttpClient<ILastFmService, LastFmService>();
 builder.Services.AddScoped<ISearchService, SearchService>();
 builder.Services.AddScoped<IListeningService, ListeningService>();
 builder.Services.AddScoped<IExcelService, ExcelService>();

@@ -18,7 +18,7 @@ namespace MyDeezerStats.API.Controllers
             _logger = logger;
         }
 
-        [Authorize]
+        //[Authorize]
         [HttpGet("top-albums")]
         public async Task<IActionResult> GetTopAlbums([FromQuery] DateTime? from, [FromQuery] DateTime? to)
         {
@@ -28,7 +28,7 @@ namespace MyDeezerStats.API.Controllers
             return Ok(result);
         }
 
-        [Authorize]
+        //[Authorize]
         [HttpGet("album")]
         public async Task<IActionResult> GetAlbum([FromQuery] string? identifier)
         {
@@ -98,7 +98,7 @@ namespace MyDeezerStats.API.Controllers
             return Ok(result);
         }
 
-        [Authorize]
+        //[Authorize]
         [HttpGet("recent")]
         public async Task<IActionResult> GetRecentTracks()
         {

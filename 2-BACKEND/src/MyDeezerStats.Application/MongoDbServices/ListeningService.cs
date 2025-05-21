@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using MyDeezerStats.Application.Dtos.LastStream;
 using MyDeezerStats.Application.Dtos.TopStream;
 using MyDeezerStats.Application.Interfaces;
+using MyDeezerStats.Domain.Entities;
 using MyDeezerStats.Domain.Entities.ListeningInfos;
 using MyDeezerStats.Domain.Exceptions;
 using MyDeezerStats.Domain.Repositories;
@@ -13,15 +14,18 @@ namespace MyDeezerStats.Application.MongoDbServices
     {
         private readonly IListeningRepository _repository;
         private readonly IDeezerService _deezerService;
+        private readonly ILastFmService _lastFmService;
         private readonly ILogger<ListeningService> _logger;
 
         public ListeningService(
             IListeningRepository repository,
             IDeezerService deezerService,
+            ILastFmService lastFmService,
             ILogger<ListeningService> logger)
         {
             _repository = repository;
             _deezerService = deezerService;
+            _lastFmService = lastFmService;
             _logger = logger;
         }
 
@@ -62,29 +66,6 @@ namespace MyDeezerStats.Application.MongoDbServices
 
             return enrichedAlbum;
         }
-
-      /*  public async Task<FullAlbumInfos> GetAlbumAsync(string fullId)
-        {
-            if (string.IsNullOrWhiteSpace(fullId) || !fullId.Contains('|'))
-            {
-                throw new ArgumentException("Invalid album identifier format", nameof(fullId));
-            }
-
-            var parts = fullId.Split('|');
-            if (parts.Length < 2)
-            {
-                throw new ArgumentException("Album identifier must contain title and artist", nameof(fullId));
-            }
-            var title = Uri.UnescapeDataString(parts[0]);
-            var artist = Uri.UnescapeDataString(parts[1]);
-
-            AlbumListening album = await _repository.GetAlbumsWithAsync(title, artist, null, null)
-                ?? throw new NotFoundException($"Album {title} by {artist} not found");
-
-            FullAlbumInfos enrichedAlbum = await _deezerService.EnrichFullAlbumWithDeezerData(album);
-
-            return enrichedAlbum;
-        }*/
 
         public async Task<List<ShortArtistInfos>> GetTopArtistsAsync(DateTime? from, DateTime? to)
         {
@@ -131,37 +112,38 @@ namespace MyDeezerStats.Application.MongoDbServices
 
         public async Task<IEnumerable<ListeningDto>> GetLatestListeningsAsync(int limit = 100)
         {
-            return await ExecuteWithErrorHandling(async () =>
+            var listenings = await _repository.GetLatestListeningsAsync(limit);
+            var result = listenings.Select(x => new ListeningDto
             {
-                var listenings = await _repository.GetLatestListeningsAsync(limit);
-                return listenings.Select(x => new ListeningDto
+                Track = x.Track,
+                Artist = x.Artist,
+                Album = x.Album,
+                Date = x.Date
+            }).OrderByDescending(x=>x.Date);
+            var lastStreamDate = result.First().Date;
+            var lastStreams = _lastFmService.GetListeningHistorySince(lastStreamDate).Result;
+            var lastStreamToUpsert = new List<ListeningEntry>();
+
+            foreach(var listeningEntry in lastStreams) 
+            { 
+                lastStreamToUpsert.Add(new ListeningEntry
                 {
-                    Track = x.Track,
-                    Artist = x.Artist,
-                    Album = x.Album,
-                    Date = x.Date
-                });
-            }, "GetLatestListeningsAsync");
-        }
-
-        #region Private Methods
-
-        private async Task<T> ExecuteWithErrorHandling<T>(Func<Task<T>> operation, string operationName)
-        {
-            using var scope = _logger.BeginScope(operationName);
-            try
-            {
-                _logger.LogInformation("Starting {Operation}", operationName);
-                var result = await operation();
-                _logger.LogInformation("Completed {Operation}", operationName);
-                return result;
+                    Album = listeningEntry.Album,
+                    Date = listeningEntry.Date, 
+                    Track = listeningEntry.Track,   
+                    Artist = listeningEntry.Artist
+                }); 
             }
-            catch (Exception ex)
+            await _repository.InsertListeningsAsync(lastStreamToUpsert);
+            listenings = await _repository.GetLatestListeningsAsync(limit);
+            result = listenings.Select(x => new ListeningDto
             {
-                _logger.LogError(ex, "Error in {Operation}", operationName);
-                throw;
-            }
+                Track = x.Track,
+                Artist = x.Artist,
+                Album = x.Album,
+                Date = x.Date
+            }).OrderByDescending(x => x.Date);
+            return result;
         }
-        #endregion
     }
 }

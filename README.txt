@@ -97,3 +97,6 @@ curl -v -X POST "http://localhost:5035/api/auth/login" -H "Content-Type: applica
 
 
 curl -i "http://localhost:5035/api/search?query=test"
+
+
+curl -X GET http://localhost:5035/api/listening/recent

@@ -91,73 +91,134 @@ namespace MyDeezerStats.Infrastructure.Mongo.Ecoutes
             );
 
             var pipeline = new[]
+{
+    // Étape 1 : Filtrer
+    PipelineStageDefinitionBuilder.Match(completeFilter),
+
+    // Étape 2 : Ajouter les champs normalisés
+    new BsonDocument("$project", new BsonDocument
+    {
+        { "Album", 1 },
+        { "Artist", 1 },
+        { "NormalizedAlbum", new BsonDocument("$toLower",
+            new BsonDocument("$trim", new BsonDocument("input", "$Album"))) }
+    }),
+
+    // Étape 3 : Extraire l'artiste principal
+    new BsonDocument("$addFields", new BsonDocument("PrimaryArtist",
+        new BsonDocument("$let", new BsonDocument
+        {
+            { "vars", new BsonDocument("artists", new BsonDocument("$split", new BsonArray { "$Artist", "," })) },
+            { "in", new BsonDocument("$trim", new BsonDocument("input",
+                new BsonDocument("$cond", new BsonArray
+                {
+                    new BsonDocument("$gt", new BsonArray { new BsonDocument("$size", "$$artists"), 0 }),
+                    new BsonDocument("$arrayElemAt", new BsonArray { "$$artists", 0 }),
+                    ""
+                }))) }
+        }))
+    ),
+
+    // Étape 4 : Grouper
+    new BsonDocument("$group", new BsonDocument
+    {
+        { "_id", new BsonDocument
             {
-                // Étape 1: Filtrer les documents
-                PipelineStageDefinitionBuilder.Match(completeFilter),
+                { "Album", "$NormalizedAlbum" },
+                { "Artist", "$PrimaryArtist" }
+            }
+        },
+        { "TotalCount", new BsonDocument("$sum", 1) },
+        { "OriginalTitle", new BsonDocument("$first", "$Album") } // ⚠️ garde le premier nom original
+    }),
 
-                // Étape 2: Projeter uniquement les champs nécessaires pour améliorer les performances
-                new BsonDocument("$project",
-                    new BsonDocument
-                    {
-                        { "Album", 1 },
-                        { "Artist", 1 },
-                        { "Track", 1 },
-                        { "NormalizedAlbum", new BsonDocument("$trim", new BsonDocument("input", "$Album")) },
-                        { "NormalizedTrack", new BsonDocument("$trim", new BsonDocument("input", "$Track")) }
-                    }),
+    // Étape 5 : Trier
+    new BsonDocument("$sort", new BsonDocument("TotalCount", -1)),
 
-                // Étape 3: Normaliser les artistes (premier artiste avant virgule, trimé)
-                new BsonDocument("$addFields",
-                    new BsonDocument("PrimaryArtist",
-                        new BsonDocument("$let",
-                            new BsonDocument
-                            {
-                                { "vars",
-                                    new BsonDocument("artists",
-                                    new BsonDocument("$split", new BsonArray { "$Artist", "," }))
-                                },
-                                { "in",
-                                    new BsonDocument("$trim",
-                                        new BsonDocument("input",
-                                            new BsonDocument("$cond",
-                                                new BsonArray
-                                                {
-                                                    new BsonDocument("$gt", new BsonArray { new BsonDocument("$size", "$$artists"), 0 }),
-                                                        new BsonDocument("$arrayElemAt", new BsonArray { "$$artists", 0 }),
-                                            ""
-                                                })))
-                                }
-                                }))),
+    // Étape 6 : Limite
+    new BsonDocument("$limit", limit),
 
-                // Étape 4: Grouper par Album + Artiste principal
-                new BsonDocument("$group",
-                    new BsonDocument
-                    {
-                        { "_id", new BsonDocument
-                            {
-                                { "Album", "$NormalizedAlbum" },
-                                { "Artist", "$PrimaryArtist" }
-                            }   
-                        },
-                        { "TotalCount", new BsonDocument("$sum", 1) }
-                    }),
+    // Étape 7 : Projection finale
+    new BsonDocument("$project", new BsonDocument
+    {
+        { "Title", "$OriginalTitle" },
+        { "Artist", "$_id.Artist" },
+        { "StreamCount", "$TotalCount" },
+        { "_id", 0 }
+    })
+};
 
-                // Étape 5: Trier par nombre d'écoutes décroissant
-                new BsonDocument("$sort", new BsonDocument("TotalCount", -1)),
 
-                // Étape 6: Limiter aux résultats demandés
-                new BsonDocument("$limit", limit),
 
-                // Étape 7: Projeter le résultat final
-                new BsonDocument("$project",
-                    new BsonDocument
-                    {
-                        { "Title", "$_id.Album" },
-                        { "Artist", "$_id.Artist" },
-                        { "StreamCount", "$TotalCount" },
-                        { "_id", 0 }
-                    })
-            };
+            //var pipeline = new[]
+            //{
+            //    // Étape 1: Filtrer les documents
+            //    PipelineStageDefinitionBuilder.Match(completeFilter),
+
+            //    // Étape 2: Projeter uniquement les champs nécessaires pour améliorer les performances
+            //    new BsonDocument("$project",
+            //        new BsonDocument
+            //        {
+            //            { "Album", 1 },
+            //            { "Artist", 1 },
+            //            { "Track", 1 },
+            //            { "NormalizedAlbum", new BsonDocument("$toLower",
+            //                new BsonDocument("$trim", new BsonDocument("input", "$Album"))) },
+            //            { "NormalizedTrack", new BsonDocument("$trim", new BsonDocument("input", "$Track")) }
+            //        }),
+
+            //    // Étape 3: Normaliser les artistes (premier artiste avant virgule, trimé)
+            //    new BsonDocument("$addFields",
+            //        new BsonDocument("PrimaryArtist",
+            //            new BsonDocument("$let",
+            //                new BsonDocument
+            //                {
+            //                    { "vars",
+            //                        new BsonDocument("artists",
+            //                        new BsonDocument("$split", new BsonArray { "$Artist", "," }))
+            //                    },
+            //                    { "in",
+            //                        new BsonDocument("$trim",
+            //                            new BsonDocument("input",
+            //                                new BsonDocument("$cond",
+            //                                    new BsonArray
+            //                                    {
+            //                                        new BsonDocument("$gt", new BsonArray { new BsonDocument("$size", "$$artists"), 0 }),
+            //                                            new BsonDocument("$arrayElemAt", new BsonArray { "$$artists", 0 }),
+            //                                ""
+            //                                    })))
+            //                    }
+            //                    }))),
+
+            //    // Étape 4: Grouper par Album + Artiste principal
+            //    new BsonDocument("$group",
+            //        new BsonDocument
+            //        {
+            //            { "_id", new BsonDocument
+            //                {
+            //                    { "Album", "$NormalizedAlbum" },
+            //                    { "Artist", "$PrimaryArtist" }
+            //                }   
+            //            },
+            //            { "TotalCount", new BsonDocument("$sum", 1) }
+            //        }),
+
+            //    // Étape 5: Trier par nombre d'écoutes décroissant
+            //    new BsonDocument("$sort", new BsonDocument("TotalCount", -1)),
+
+            //    // Étape 6: Limiter aux résultats demandés
+            //    new BsonDocument("$limit", limit),
+
+            //    // Étape 7: Projeter le résultat final
+            //    new BsonDocument("$project",
+            //        new BsonDocument
+            //        {
+            //            { "Title", "$_id.Album" },
+            //            { "Artist", "$_id.Artist" },
+            //            { "StreamCount", "$TotalCount" },
+            //            { "_id", 0 }
+            //        })
+            //};
 
             var results = await collection.Aggregate<BsonDocument>(pipeline).ToListAsync();
 
