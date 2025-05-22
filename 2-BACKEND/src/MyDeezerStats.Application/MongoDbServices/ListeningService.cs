@@ -29,9 +29,9 @@ namespace MyDeezerStats.Application.MongoDbServices
             _logger = logger;
         }
 
-        public async Task<List<ShortAlbumInfos>> GetTopAlbumsAsync(DateTime? from, DateTime? to)
+        public async Task<List<ShortAlbumInfos>> GetTopAlbumsAsync(DateTime? from, DateTime? to, int nb = 5)
         {
-            var topAlbums = await _repository.GetTopAlbumsWithAsync(from, to, 10);
+            var topAlbums = await _repository.GetTopAlbumsWithAsync(nb, from, to);
 
             var albumTasks = topAlbums.Select(async album =>
             {
@@ -67,9 +67,9 @@ namespace MyDeezerStats.Application.MongoDbServices
             return enrichedAlbum;
         }
 
-        public async Task<List<ShortArtistInfos>> GetTopArtistsAsync(DateTime? from, DateTime? to)
+        public async Task<List<ShortArtistInfos>> GetTopArtistsAsync(DateTime? from, DateTime? to, int nb = 5)
         {
-            var topArtist = await _repository.GetTopArtistWithAsync(from, to, 10);
+            var topArtist = await _repository.GetTopArtistWithAsync(nb, from, to);
             _logger.LogInformation($"Nombre d'artistes récupérés : {topArtist.Count}");
             var albumTasks = topArtist.Select(async artist =>
             {
@@ -96,9 +96,9 @@ namespace MyDeezerStats.Application.MongoDbServices
             return enrichedArtist;
         }
      
-        public async Task<List<ApiTrackInfos>> GetTopTracksAsync(DateTime? from, DateTime? to)
+        public async Task<List<ApiTrackInfos>> GetTopTracksAsync(DateTime? from, DateTime? to, int nb = 5)
         {
-            var topTrack = await _repository.GetTopTrackWithAsync(from, to, 10);
+            var topTrack = await _repository.GetTopTrackWithAsync(nb, from, to);
 
             var trackTasks = topTrack.Select(async track =>
             {

@@ -18,17 +18,17 @@ namespace MyDeezerStats.API.Controllers
             _logger = logger;
         }
 
-        //[Authorize]
+        [Authorize]
         [HttpGet("top-albums")]
-        public async Task<IActionResult> GetTopAlbums([FromQuery] DateTime? from, [FromQuery] DateTime? to)
+        public async Task<IActionResult> GetTopAlbums([FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] int nb)
         {
             _logger.LogInformation("GET /top-albums called with from={From} to={To}", from, to);
-            var result = await _service.GetTopAlbumsAsync(from, to);
+            var result = await _service.GetTopAlbumsAsync(from, to, nb);
             _logger.LogInformation($"Found {result}");
             return Ok(result);
         }
 
-        //[Authorize]
+        [Authorize]
         [HttpGet("album")]
         public async Task<IActionResult> GetAlbum([FromQuery] string? identifier)
         {
@@ -55,10 +55,10 @@ namespace MyDeezerStats.API.Controllers
 
         [Authorize]
         [HttpGet("top-artists")]
-        public async Task<IActionResult> GetTopArtists([FromQuery] DateTime? from, [FromQuery] DateTime? to)
+        public async Task<IActionResult> GetTopArtists([FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] int nb)
         {
             _logger.LogInformation("GET /top-artists called with from={From} to={To}", from, to);
-            var result = await _service.GetTopArtistsAsync(from, to);
+            var result = await _service.GetTopArtistsAsync(from, to, nb);
             _logger.LogInformation($"Artistes trouvés: {result.Count}");
             return Ok(result);
         }
@@ -90,15 +90,15 @@ namespace MyDeezerStats.API.Controllers
 
         [Authorize]
         [HttpGet("top-tracks")]
-        public async Task<IActionResult> GetTopTracks([FromQuery] DateTime? from, [FromQuery] DateTime? to)
+        public async Task<IActionResult> GetTopTracks([FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] int nb)
         {
             _logger.LogInformation("GET /top-tracks called with from={From} to={To}", from, to);
-            var result = await _service.GetTopTracksAsync(from, to);
+            var result = await _service.GetTopTracksAsync(from, to, nb);
             _logger.LogInformation($"Found {result}");
             return Ok(result);
         }
 
-        //[Authorize]
+        [Authorize]
         [HttpGet("recent")]
         public async Task<IActionResult> GetRecentTracks()
         {

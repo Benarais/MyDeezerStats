@@ -56,7 +56,9 @@
    
     <!-- Top 20 Albums -->
     <section class="section">
-        <h2><i class="fas fa-compact-disc"></i> Top albums</h2>
+        <h2 class="clickable" (click)="goToTop('album')">
+            <i class="fas fa-compact-disc"></i> Top albums
+        </h2>
         <div class="card-list">
             <div *ngFor="let album of topAlbums; let i = index" class="card" (click)="navigateToDetail('album', album)"
                  [title]="album.title + (album.artist ? ' - ' + album.artist : '')">
@@ -73,7 +75,9 @@
   
     <!-- Top 20 Artistes -->
     <section class="section">
-        <h2><i class="fas fa-user"></i> Top artistes</h2>
+        <h2 class="clickable" (click)="goToTop('artist')">
+            <i class="fas fa-user"></i> Top artistes
+        </h2>
         <div class="card-list">
             <div *ngFor="let artist of topArtists; let i = index" class="card"  (click)="navigateToDetail('artist', artist)"
                  [title]="artist.artist">
@@ -89,7 +93,9 @@
   
     <!-- Top 20 Morceaux -->
     <section class="section">
-        <h2><i class="fas fa-music"></i> Top morceaux</h2>
+        <h2 class="clickable" (click)="goToTop('track')">
+            <i class="fas fa-user"></i> Top morceaux
+        </h2>
         <div class="card-list">
             <div *ngFor="let song of topTracks; let i = index" class="card" 
                  [title]="song.track + ' - ' + song.artist + (song.album ? ' (' + song.album + ')' : '')">

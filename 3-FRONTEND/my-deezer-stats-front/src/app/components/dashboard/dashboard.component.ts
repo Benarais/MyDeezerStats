@@ -127,9 +127,9 @@ export class DashboardComponent implements OnInit {
     this.errorMessage = '';
 
     forkJoin([
-      this.dashboardService.getTopAlbums(this.selectedPeriod),
-      this.dashboardService.getTopArtists(this.selectedPeriod),
-      this.dashboardService.getTopTracks(this.selectedPeriod),
+      this.dashboardService.getTopAlbums(this.selectedPeriod,5),
+      this.dashboardService.getTopArtists(this.selectedPeriod,5),
+      this.dashboardService.getTopTracks(this.selectedPeriod,5),
       this.dashboardService.getRecentListens(this.selectedPeriod)
     ]).pipe(
       finalize(() => this.isLoading = false)
@@ -142,7 +142,6 @@ export class DashboardComponent implements OnInit {
       },
       error: (err) => {
         this.errorMessage = 'Erreur lors du chargement';
-        console.error('Détail :', err);
       }
     });
   }
@@ -160,7 +159,6 @@ export class DashboardComponent implements OnInit {
       this.filteredResults = [];
       this.showSearchResults = false;
     }
-    console.log('Filtered Results:', this.filteredResults);
   }
   
   onSelectResult(item: SearchResult): void {
@@ -192,6 +190,10 @@ export class DashboardComponent implements OnInit {
     }
   }
 
+  goToTop(type: 'album' | 'artist' | 'track') {
+    this.router.navigate(['/top', type]);
+  }
+
   navigateToDetail(type: 'album' | 'artist', item: any): void {
     let identifier = '';
     switch (type) {
@@ -203,7 +205,6 @@ export class DashboardComponent implements OnInit {
   
       case 'artist':
         identifier = item.artist ?? '';
-        console.log(identifier);
         break;
     }
   

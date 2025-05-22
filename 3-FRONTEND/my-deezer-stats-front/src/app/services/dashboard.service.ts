@@ -7,13 +7,10 @@ import { Album, Artist, Track, Recent, SearchResult } from '../models/dashboard.
   providedIn: 'root'
 })
 export class DashboardService {
-
-   
   
   private readonly apiUrl = 'http://localhost:5000/api';
   last4Weeks: Date = new Date();
 
-  
   constructor(private http: HttpClient) {}
 
   private getAuthHeaders(): HttpHeaders {
@@ -41,12 +38,12 @@ export class DashboardService {
     );
   }
 
-  getTopAlbums(period: string): Observable<Album[]> {
+  getTopAlbums(period: string, nb: number): Observable<Album[]> {
     const { from, to } = this.getDateRange(period);
-    
     const params = new HttpParams()
       .set('from', from.toISOString())  
-      .set('to', to.toISOString());
+      .set('to', to.toISOString())
+      .set('nb', nb.toString());
   
     return this.http.get<Album[]>(`${this.apiUrl}/listening/top-albums`, {
       headers: this.getAuthHeaders(),
@@ -54,24 +51,25 @@ export class DashboardService {
     });
   }
 
-  getTopArtists(period : string): Observable<Artist[]> {
-    const { from, to } = this.getDateRange(period);
-    
-    const params = new HttpParams()
-      .set('from', from.toISOString())
-      .set('to', to.toISOString());
-    return this.http.get<Artist[]>(`${this.apiUrl}/listening/top-artists`, {
-      headers: this.getAuthHeaders(),
-      params: params
-    });
-  }
+  getTopArtists(period: string, nb: number): Observable<Artist[]> {
+  const { from, to } = this.getDateRange(period);
+  const params = new HttpParams()
+    .set('from', from.toISOString())
+    .set('to', to.toISOString())
+    .set('nb', nb.toString());
 
-  getTopTracks(period : string): Observable<Track[]> {
+  return this.http.get<Artist[]>(`${this.apiUrl}/listening/top-artists`, {
+    headers: this.getAuthHeaders(),
+    params: params
+  });
+}
+
+  getTopTracks(period : string, nb: number): Observable<Track[]> {
     const { from, to } = this.getDateRange(period);
-    
     const params = new HttpParams()
       .set('from', from.toISOString()) 
-      .set('to', to.toISOString());
+      .set('to', to.toISOString())
+      .set('nb', nb.toString());
     return this.http.get<Track[]>(`${this.apiUrl}/listening/top-tracks`, {
       headers: this.getAuthHeaders(),
       params: params
@@ -91,8 +89,8 @@ export class DashboardService {
   }
 
   private getDateRange(period: string): { from: Date, to: Date } {
-    console.log("Period received:", period);
     const currentDate = new Date();
+    this.last4Weeks = new Date();
     const year = currentDate.getFullYear();
     const previousYear = year - 1;
   
@@ -146,31 +144,4 @@ export class DashboardService {
       })
     );
   }
-  
-
-/*  search(query: string, types: ('album' | 'artist')[]): Observable<SearchResult[]> {
-    if (!query || query.trim() === '') {
-      return new Observable(observer => {
-        observer.next([]);
-        observer.complete();
-      });
-    }
-  
-    let params = new HttpParams().set('query', query.trim());
-  
-    if (types.length > 0) {
-      params = params.set('types', types.join(','));
-    }
-  
-    return this.http.get<SearchResult[]>(`${this.apiUrl}/search/suggest`, {
-      headers: this.getAuthHeaders(),
-      params
-    }).pipe(
-      catchError(error => {
-        console.error('Erreur lors de la recherche:', error);
-        return throwError(() => error);
-      })
-    );
-  }*/
-
 }
